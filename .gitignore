@@ -1,0 +1,4 @@
+node_modules/
+messages.json
+messages_corrompu_*.json
+.DS_Store

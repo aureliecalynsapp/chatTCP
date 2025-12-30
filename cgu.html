@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+  <script src="translations.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CGU - Messagerie Sécurisée</title>
+	<link rel="stylesheet" href="style.css">
+</head>
+<body-cgu>
+    <div class="card">
+        <h1 id="cgu_main_title"></h1>
+        <p><i id="last_update"></i></p>
+
+        <section>
+            <h2 id="cgu_sec1_title"></h2>
+            <p id="cgu_sec1_text"></p>
+        </section>
+
+        <section>
+            <h2 id="cgu_sec2_title"></h2>
+            <div class="important" id="cgu_sec2_text"></div>
+        </section>
+
+        <section>
+            <h2 id="cgu_sec3_title"></h2>
+            <p id="cgu_sec3_text"></p>
+        </section>
+
+        <section>
+            <h2 id="cgu_sec4_title"></h2>
+            <p id="cgu_sec4_text"></p>
+        </section>
+        
+    </div>
+	<script>
+		// On attend que toute la page et les scripts externes (translations.js) soient chargés
+		window.onload = function() {
+			// 1. Récupérer la langue dans l'URL (ex: ?lang=zh)
+			const urlParams = new URLSearchParams(window.location.search);
+			const lang = urlParams.get('lang') || 'fr';
+			
+			console.log("Langue détectée pour les CGU :", lang);
+
+			// 2. Vérifier si l'objet translations existe
+			if (typeof translations === 'undefined') {
+				console.error("Erreur : Le fichier translations.js n'est pas chargé.");
+				return;
+			}
+
+			const t = translations[lang];
+
+			// 3. Remplissage manuel pour être certain de ne rien rater
+			const keysToTranslate = [
+				'cgu_main_title', 
+				'last_update',
+				'cgu_sec1_title', 'cgu_sec1_text',
+				'cgu_sec2_title', 'cgu_sec2_text',
+				'cgu_sec3_title', 'cgu_sec3_text',
+				'cgu_sec4_title', 'cgu_sec4_text'
+			];
+
+			keysToTranslate.forEach(key => {
+				const el = document.getElementById(key);
+				if (el && t[key]) {
+					el.innerText = t[key];
+				} else {
+					console.warn("Élément ou traduction manquante pour :", key);
+				}
+			});
+		};
+	</script>
+</body-cgu>
+</html>
