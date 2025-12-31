@@ -140,7 +140,7 @@ p, li {
 .is-read {
   color : #3498db !important;
 }
-.clocks-container {
+#clocks-container {
     color: var(--text-color, #333); font-family: sans-serif;
 }
 .clock-unit {

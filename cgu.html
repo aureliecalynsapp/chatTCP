@@ -43,8 +43,8 @@
 		// On attend que toute la page et les scripts externes (translations.js) soient chargés
 		window.onload = function() {
 			// 1. Récupérer la langue dans l'URL (ex: ?lang=zh)
-			const urlParams = new URLSearchParams(window.location.search);
-			const lang = urlParams.get('lang') || 'fr';
+			var urlParams = new URLSearchParams(window.location.search);
+			var lang = urlParams.get('lang') || 'fr';
 			
 			console.log("Langue détectée pour les CGU :", lang);
 
@@ -54,10 +54,10 @@
 				return;
 			}
 
-			const t = translations[lang];
+			var t = translations[lang];
 
 			// 3. Remplissage manuel pour être certain de ne rien rater
-			const keysToTranslate = [
+			var keysToTranslate = [
 				'cgu_main_title', 
 				'last_update',
 				'cgu_sec1_title', 'cgu_sec1_text',
@@ -67,7 +67,7 @@
 			];
 
 			keysToTranslate.forEach(key => {
-				const el = document.getElementById(key);
+				var el = document.getElementById(key);
 				if (el && t[key]) {
 					el.innerText = t[key];
 				} else {

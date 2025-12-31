@@ -24,7 +24,7 @@ function startSecurityProcess() {
 		document.getElementById('welcome-screen').style.display = 'none';
 		document.getElementById('chat-container').style.display = 'flex';
 
-		const myTZ = Intl.DateTimeFormat().resolvedOptions().timeZone;
+		var myTZ = Intl.DateTimeFormat().resolvedOptions().timeZone;
 		socket.emit('join', myPseudo, myTZ);
 		
 	} else {

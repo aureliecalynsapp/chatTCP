@@ -12,13 +12,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="style.css">
 
+    <script src="https://cdn.jsdelivr.net/npm/emoji-mart@latest/dist/browser.js" ></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js" ></script>
 </head>
 
 <body>
-	<div id="debug-check" style="background: orange; text-align: center; font-weight: bold; padding: 5px; font-size: 12px;">
-		V1.2 - Chargement en cours...
-	</div>
 	<div id="welcome-screen">
+		<div style="position: fixed; bottom: 10px; width: 100%; text-align: center; pointer-events: none;">
+			<span style="background: rgba(0,0,0,0.05); padding: 2px 8px; border-radius: 10px; color: #bbb; font-size: 9px; letter-spacing: 1px;">
+				RELEASE 1.3
+			</span>
+		</div>
 		<div class="lang-selector-home">
 			<select id="lang-select-home" onchange="applyLanguage(this.value)">
 				<option value="fr">Français 🇫🇷</option>
@@ -42,7 +46,7 @@
         <div id="chat-header">
             <div style="font-weight: bold;" id="txt-header-title"></div>
 
-			<div class="clocks-container" style="display: flex; gap: 20px; align-items: center; padding: 10px;">
+			<div id="clocks-container" style="display: flex; gap: 20px; align-items: center; padding: 10px;">
 				<div class="clock-unit">
 					<div class="analog-clock" id="them-analog">
 						<div class="hand hour"></div>
@@ -89,9 +93,11 @@
         </form>
     </div>
 
-    <script src="/socket.io/socket.io.js"></script>
     <script>
-        var socket = io();
+        var socket = io({
+			transports: ['polling', 'websocket'],
+			upgrade: true
+		});
         var chatContainer = document.getElementById('chat-container');
         var messages = document.getElementById('messages');
         var form = document.getElementById('form');
@@ -103,7 +109,7 @@
 		
 		// Capture les erreurs JavaScript globales
 		window.onerror = function(message, source, lineno, colno, error) {
-			const errorData = {
+			var errorData = {
 				message: message,
 				source: source,
 				line: lineno,
@@ -113,13 +119,16 @@
 			if (typeof socket !== 'undefined') {
 				socket.emit('client error', errorData);
 			}
+			alert(errorData);
 		};
-        
+		
+        //socket.emit('client error', { message: "DEBUG: Script HTML chargé", pseudo: myPseudo });
+		
     	// Initialisation au chargement
     	document.addEventListener('DOMContentLoaded', () => {
-    		const selector = document.getElementById('lang-select');
+    		var selector = document.getElementById('lang-select');
     		if (selector) {
-    			const savedLang = localStorage.getItem('preferred-lang') || 'fr';
+    			var savedLang = localStorage.getItem('preferred-lang') || 'fr';
     			selector.value = savedLang;
     			applyLanguage(savedLang);
     
@@ -187,7 +196,7 @@
 			`;
 
 			// --- LOGIQUE D'INSERTION (C'est ici que ça change) ---
-			const messagesList = document.getElementById('messages');
+			var messagesList = document.getElementById('messages');
 
 			if (isPrepend) {
 				// On insère tout en haut de la liste <ul>
@@ -234,18 +243,18 @@
     
         // ENVOI DE PHOTOS CHIFFRÉES AVEC COMPRESSION ---
 		document.getElementById('file-input').addEventListener('change', function(e) {
-			const file = e.target.files[0];
+			var file = e.target.files[0];
 			if (!file) return;
 
 			// --- CONDITION SPÉCIALE GIF ---
 			if (file.type === "image/gif") {
-				const reader = new FileReader();
+				var reader = new FileReader();
 				reader.onload = function(event) {
-					const rawImageData = event.target.result;
+					var rawImageData = event.target.result;
 					// On chiffre directement le GIF sans passer par la compression
-					const encryptedImage = CryptoJS.AES.encrypt(rawImageData, SECRET_KEY).toString();
+					var encryptedImage = CryptoJS.AES.encrypt(rawImageData, SECRET_KEY).toString();
 					
-					const imageData = {
+					var imageData = {
 						id: 'img-' + Date.now(),
 						text: "", 
 						image: encryptedImage,
@@ -261,8 +270,8 @@
 			// --- POUR TOUT LE RESTE (JPG, PNG) On compresse ---
 			else {
 				compressImage(file, function(compressedBase64) {
-					const encryptedImage = CryptoJS.AES.encrypt(compressedBase64, SECRET_KEY).toString();
-					const imageData = {
+					var encryptedImage = CryptoJS.AES.encrypt(compressedBase64, SECRET_KEY).toString();
+					var imageData = {
 						id: 'img-' + Date.now(),
 						text: "", 
 						image: encryptedImage,
@@ -278,7 +287,7 @@
 		});
     
         // EMOJIS ---
-        const picker = new EmojiMart.Picker({
+        var picker = new EmojiMart.Picker({
             locale: 'fr',
             onEmojiSelect: (emoji) => {
                 input.value += emoji.native;
@@ -306,10 +315,10 @@
 		
     	
     	// DARK MODE ---
-    	const themeToggle = document.getElementById('theme-toggle');
+    	var themeToggle = document.getElementById('theme-toggle');
     
     	// Charger le thème sauvegardé
-    	const savedTheme = localStorage.getItem('theme') || 'light';
+    	var savedTheme = localStorage.getItem('theme') || 'light';
     	if (savedTheme === 'dark') {
     		document.documentElement.setAttribute('data-theme', 'dark');
     		themeToggle.innerText = '☀️';
@@ -317,7 +326,7 @@
     
     	// Écouter le clic sur le bouton
     	themeToggle.addEventListener('click', () => {
-    		const isDark = document.documentElement.hasAttribute('data-theme');
+    		var isDark = document.documentElement.hasAttribute('data-theme');
     		if (isDark) {
     			document.documentElement.removeAttribute('data-theme');
     			themeToggle.innerText = '🌙';
@@ -332,7 +341,7 @@
 		// CHARGEMENT MESSAGE ANCIEN ---
 		// Événement clic sur le bouton
 		document.getElementById('load-more-btn').addEventListener('click', () => {
-			const currentCount = document.querySelectorAll('.message').length;
+			var currentCount = document.querySelectorAll('.message').length;
 			socket.emit('load more', currentCount);
 		});
 		

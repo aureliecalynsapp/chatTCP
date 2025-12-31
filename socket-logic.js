@@ -5,12 +5,12 @@ function setupSocketListeners() {
 	if (!socket) return;
 		
 	socket.on('load history', (h) => {
-		const btn = document.getElementById('load-more-btn');
+		var btn = document.getElementById('load-more-btn');
 		
 		// 1. Afficher ou cacher le bouton
 		if (h.length >= 20) {
 			btn.style.display = 'block';
-			const lang = localStorage.getItem('preferred-lang') || 'fr';
+			var lang = localStorage.getItem('preferred-lang') || 'fr';
 			// On vérifie que translations existe avant d'afficher
 			if (typeof translations !== 'undefined' && translations[lang]) {
 				btn.textContent = translations[lang].load_more;
@@ -50,7 +50,7 @@ function setupSocketListeners() {
 	});
 		
 	socket.on('user typing', (pseudo) => {
-		const lang = localStorage.getItem('preferred-lang') || 'fr';
+		var lang = localStorage.getItem('preferred-lang') || 'fr';
 		// On vérifie que translations existe avant d'afficher
 		if (typeof translations !== 'undefined' && translations[lang]) {
 			typingIndicator.textContent = pseudo + translations[lang].typing;
@@ -60,7 +60,7 @@ function setupSocketListeners() {
 	socket.on('user stop typing', () => { typingIndicator.textContent = ""; });
 
 	socket.on('user read message', (msgId) => {
-		const tick = document.getElementById(`tick-${msgId}`);
+		var tick = document.getElementById(`tick-${msgId}`);
 		if (tick) {
 			tick.innerText = '✓✓'; // Passage au double check
 			tick.style.color = '#3498db'; // Passage au bleu
@@ -68,34 +68,48 @@ function setupSocketListeners() {
 	});
 	
 	socket.on('update users timezones', (allTZ) => {
-		// On cherche le fuseau de la personne qui n'est pas "Moi"
+		// 1. On cherche le fuseau de la personne qui n'est pas "Moi"
+		let foundOther = false;
 		for (let user in allTZ) {
 			if (user !== myPseudo) {
-				themTZ = allTZ[user];
+				themTZ = allTZ[user]; // Met à jour la variable globale
+				foundOther = true;
+				
+				// 2. On pilote l'affichage des horloges (Fonction dans ui.js)
+				if (typeof setupClocksVisibility === 'function') {
+					setupClocksVisibility(themTZ);
+				}
+				break; // On a trouvé l'interlocuteur, on s'arrête
 			}			
 		}
-	});	
+
+		// 3. Si on est seul dans le salon, on cache les horloges
+		/*if (!foundOther) {
+			var clockContainer = document.getElementById('clocks-container');
+			if (clockContainer) clockContainer.style.display = 'none';
+		}*/
+	});
 	
 	// Réception des messages anciens
 	socket.on('older messages', (olderMessages) => {
-		const btn = document.getElementById('load-more-btn');
+		var btn = document.getElementById('load-more-btn');
 		if (olderMessages.length === 0) {
 			btn.style.display = 'none'; // Plus rien à charger
 			return;
 		}
 		
-		const lang = localStorage.getItem('preferred-lang') || 'fr';
+		var lang = localStorage.getItem('preferred-lang') || 'fr';
 		// On vérifie que translations existe avant d'afficher
 		if (typeof translations !== 'undefined' && translations[lang]) {
 			btn.textContent = translations[lang].load_more;
 		}
 		
-		const messagesList = document.getElementById('messages');
-		const oldHeight = messagesList.scrollHeight; // On mémorise la hauteur avant insertion
+		var messagesList = document.getElementById('messages');
+		var oldHeight = messagesList.scrollHeight; // On mémorise la hauteur avant insertion
 		// On insère les messages un par un juste après le bouton
 		// On les inverse pour qu'ils s'affichent dans le bon ordre chronologique
 		olderMessages.reverse().forEach(data => {
-				const side = (data.pseudo === myPseudo) ? 'me' : 'them';
+				var side = (data.pseudo === myPseudo) ? 'me' : 'them';
 				addMessage(data, side, true); 
 		});
 		// RECALCUL DU SCROLL : On replace l'utilisateur là où il était
@@ -104,5 +118,6 @@ function setupSocketListeners() {
 		
 		if (olderMessages.length < 20) btn.style.display = 'none';
 	});
+	
 	
 }

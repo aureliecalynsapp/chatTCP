@@ -1,8 +1,8 @@
-const translations = {
+var translations = {
     fr: {
         header_title: "💬 Mon Chat Sécurisé",
         view_cgu: "📜 CGU",
-        input_placeholder: "Écrivez un message...",
+        input_placeholder: "Écrivez ...",
         send_btn: "Envoyer",
         typing: " est en train d'écrire...",
         cgu_title: "Conditions Générales d'Utilisation",

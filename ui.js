@@ -1,5 +1,6 @@
 //ui.js
-let themTZ = "Asia/Shanghai"; // Par défaut
+let myTZ = Intl.DateTimeFormat().resolvedOptions().timeZone; // Ta zone
+let themTZ = myTZ; // Par défaut, on considère que l'autre est au même endroit
 
 // FONCTION DE FORMATEUR DE DATE (29 Dec 18:05) ---
 function getNowFormatted() {
@@ -20,14 +21,14 @@ function getHashColor(str) {
 function applyLanguage(lang) {
 	console.log("Changement de langue vers :", lang); // Pour vérifier dans la console (F12)
     		
-	const t = translations[lang];
+	var t = translations[lang];
 	if (!t) {
 		console.error("Langue non trouvée dans translations.js :", lang);
 		return;
 	}
     
 	// Liste des IDs à mettre à jour
-	const mapping = {
+	var mapping = {
 		'txt-header-title': t.header_title,
 		'txt-view-cgu': t.view_cgu,
 		'txt-welcome-title': t.welcome_title,
@@ -39,7 +40,7 @@ function applyLanguage(lang) {
 	};
     
 	for (let id in mapping) {
-		const el = document.getElementById(id);
+		var el = document.getElementById(id);
 		if (el) {
 			if (mapping[id] === 'placeholder') {
 				el.placeholder = t.input_placeholder;
@@ -60,45 +61,45 @@ function applyLanguage(lang) {
 			
 	// SYNCHRONISATION : On s'assure que les deux sélecteurs affichent la même langue
 	// On cherche tous les menus de langue et on leur impose la valeur
-	const selectors = ['lang-select-home', 'lang-select']; 
+	var selectors = ['lang-select-home', 'lang-select']; 
 	selectors.forEach(id => {
-		const el = document.getElementById(id);
+		var el = document.getElementById(id);
 		if (el) {
 			el.value = lang; // Force l'affichage sur "en", "fr" ou "zh"
 		}
 	});
 		
 	// On met à jour le lien vers les CGU pour inclure la langue
-	const cguLink = document.getElementById('txt-view-cgu');
+	var cguLink = document.getElementById('txt-view-cgu');
 	if(cguLink) {
 		cguLink.href = `/cgu?lang=${lang}`;
 	}
 }
 
 function updateDynamicClocks() {
-	const now = new Date();
+	var now = new Date();
 
 	// 1. Détection automatique de MA ville
-	const myTZ = Intl.DateTimeFormat().resolvedOptions().timeZone;
-	const myCity = myTZ.split('/').pop().replace('_', ' ');
-	const themCity = themTZ.split('/').pop().replace('_', ' ');
+	var myTZ = Intl.DateTimeFormat().resolvedOptions().timeZone;
+	var myCity = myTZ.split('/').pop().replace('_', ' ');
+	var themCity = themTZ.split('/').pop().replace('_', ' ');
 
-	const zones = [
+	var zones = [
 		{ id: 'me-analog', tz: myTZ, nameId: 'me-city-name', name: myCity },
 		{ id: 'them-analog', tz: themTZ, nameId: 'them-city-name', name: themCity }
 	];
 
 	zones.forEach(zone => {
 		try {
-			const timeStr = now.toLocaleTimeString('en-US', { 
+			var timeStr = now.toLocaleTimeString('en-US', { 
 				timeZone: zone.tz, hour12: false, hour: '2-digit', minute: '2-digit' 
 			});
-			const [hours, minutes] = timeStr.split(':').map(Number);
+			var [hours, minutes] = timeStr.split(':').map(Number);
 
-			const hourDeg = (hours % 12) * 30 + minutes * 0.5;
-			const minuteDeg = minutes * 6;
+			var hourDeg = (hours % 12) * 30 + minutes * 0.5;
+			var minuteDeg = minutes * 6;
 
-			const clockEl = document.getElementById(zone.id);
+			var clockEl = document.getElementById(zone.id);
 			clockEl.style.borderColor = zone.color;
 			clockEl.querySelector('.hour').style.transform = `translateX(-50%) rotate(${hourDeg}deg)`;
 			clockEl.querySelector('.minute').style.transform = `translateX(-50%) rotate(${minuteDeg}deg)`;
@@ -109,16 +110,49 @@ function updateDynamicClocks() {
 		}
 	});
 }
+// Fonction appelée par socket-logic.js quand un partenaire arrive
+function setupClocksVisibility(remoteTZ) {
+	if (!remoteTZ) return;
+	
+    themTZ = remoteTZ; // Met à jour la variable globale utilisée par updateDynamicClocks
+    
+    var clockContainer = document.getElementById('clocks-container');
+    if (clockContainer) {
+        if (shouldShowClocks(remoteTZ)) {
+            clockContainer.style.display = 'flex'; // ou 'block' selon ton CSS
+            updateDynamicClocks(); // Rafraîchissement immédiat
+            console.log("Fuseaux différents : Affichage des horloges");
+        } else {
+            clockContainer.style.display = 'none';
+            console.log("Même fuseau : Horloges masquées");
+        }
+    }
+}
+
+function shouldShowClocks(remoteTZ) {
+    var now = new Date();
+    
+    // On compare uniquement HH:mm (sans les secondes)
+    var myTime = new Intl.DateTimeFormat('fr-FR', {
+        hour: '2-digit', minute: '2-digit', timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
+    }).format(now);
+
+    var remoteTime = new Intl.DateTimeFormat('fr-FR', {
+        hour: '2-digit', minute: '2-digit', timeZone: remoteTZ
+    }).format(now);
+
+    return myTime !== remoteTime;
+}
 
 /* Pensée du jour */
 function displayDailyQuote(forcedLang) {
 	// Si on passe une langue, on l'utilise, sinon on cherche dans le stockage, sinon 'fr'
-	const currentLang = forcedLang || localStorage.getItem('preferred-lang') || 'fr';
+	var currentLang = forcedLang || localStorage.getItem('preferred-lang') || 'fr';
 	
 	// On vérifie si la fonction getDailyQuote (de quotes.js) existe
 	if (typeof getDailyQuote === 'function') {
-		const quoteText = getDailyQuote(currentLang);
-		const quoteEl = document.getElementById('quote-text');
+		var quoteText = getDailyQuote(currentLang);
+		var quoteEl = document.getElementById('quote-text');
 		if (quoteEl) {
 			quoteEl.innerText = quoteText;
 		}
@@ -126,14 +160,14 @@ function displayDailyQuote(forcedLang) {
 }
 
 function compressImage(file, callback) {
-    const reader = new FileReader();
+    var reader = new FileReader();
     reader.readAsDataURL(file);
     reader.onload = (event) => {
-        const img = new Image();
+        var img = new Image();
         img.src = event.target.result;
         img.onload = () => {
-            const canvas = document.createElement('canvas');
-            const MAX_WIDTH = 800; // On limite la largeur pour le chat
+            var canvas = document.createElement('canvas');
+            var MAX_WIDTH = 800; // On limite la largeur pour le chat
             let width = img.width;
             let height = img.height;
 
@@ -144,24 +178,28 @@ function compressImage(file, callback) {
 
             canvas.width = width;
             canvas.height = height;
-            const ctx = canvas.getContext('2d');
+            var ctx = canvas.getContext('2d');
             ctx.drawImage(img, 0, 0, width, height);
 
             // Exportation en JPEG compressé (qualité 0.7)
-            const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+            var dataUrl = canvas.toDataURL('image/jpeg', 0.7);
             callback(dataUrl);
         };
     };
 	console.log("Fichier compressé");
 }
 
-// On attend que le HTML soit chargé pour lancer le moteur
+// On attend que le HTML soit chargé
 document.addEventListener('DOMContentLoaded', () => {
-	// On lance une première fois pour éviter d'attendre 1 seconde le premier tic-tac
-	updateDynamicClocks(); 
-		
-	// On règle la répétition
-	 setInterval(updateDynamicClocks, 1000);
+    // 1. Cacher les horloges au démarrage (on attend de savoir qui est en face)
+    var clockContainer = document.getElementById('clocks-container');
+    if (clockContainer) clockContainer.style.display = 'none';
 
-	console.log("Moteur des horloges démarré dans ui.js");
+    // 2. Lancer le moteur (il tournera en arrière-plan)
+    setInterval(updateDynamicClocks, 1000);
+
+    console.log("Moteur des horloges prêt (en attente de connexion)");
 });
+
+var debugDiv = document.getElementById('debug-check');
+if (debugDiv) debugDiv.style.display = 'none';

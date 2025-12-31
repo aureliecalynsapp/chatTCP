@@ -1,23 +1,23 @@
-const express = require('express');
-const app = express();
+var express = require('express');
+var app = express();
 app.use(express.static(__dirname)); 
-const http = require('http');
-const server = http.createServer(app);
-const { Server } = require("socket.io");
-const fs = require('fs');
+var http = require('http');
+var server = http.createServer(app);
+var { Server } = require("socket.io");
+var fs = require('fs');
 
-const io = new Server(server, {
+var io = new Server(server, {
     maxHttpBufferSize: 1e7 // 10Mo pour les photos chiffrées
 });
 
-const DATA_FILE = './messages.json';
+var DATA_FILE = './messages.json';
 let messagesSave = [];
-const userTimezones = {};
+var userTimezones = {};
 
 // Chargement initial (On charge TOUT l'historique)
 try {
     if (fs.existsSync(DATA_FILE)) {
-        const fileContent = fs.readFileSync(DATA_FILE, 'utf-8');
+        var fileContent = fs.readFileSync(DATA_FILE, 'utf-8');
         messagesSave = fileContent ? JSON.parse(fileContent) : [];
     }
 } catch (err) {
@@ -43,18 +43,18 @@ io.on('connection', (socket) => {
         io.emit('update users timezones', userTimezones);
         
         // --- MODIFICATION ICI : On n'envoie que les 20 derniers à la connexion ---
-        const last20 = messagesSave.slice(-20);
+        var last20 = messagesSave.slice(-20);
         socket.emit('load history', last20);
     });
 
     // --- NOUVEAU : Gestion du bouton "Charger plus" ---
     socket.on('load more', (currentCount) => {
-        const total = messagesSave.length;
-        const end = total - currentCount;
-        const start = Math.max(0, end - 20);
+        var total = messagesSave.length;
+        var end = total - currentCount;
+        var start = Math.max(0, end - 20);
 
         if (end > 0) {
-            const olderBatch = messagesSave.slice(start, end);
+            var olderBatch = messagesSave.slice(start, end);
             socket.emit('older messages', olderBatch);
         } else {
             socket.emit('older messages', []);
@@ -110,7 +110,7 @@ io.on('connection', (socket) => {
     });
 });
 
-const PORT = process.env.PORT || 3000;
+var PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
     console.log(`Serveur prêt sur le port ${PORT}`);
 });

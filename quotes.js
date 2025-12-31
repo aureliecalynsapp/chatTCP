@@ -1,5 +1,5 @@
 // quotes.js
-const positiveQuotes = [
+var positiveQuotes = [
 	{ 
         fr: "Chaque jour est une nouvelle chance de briller.", 
         en: "Every day is a new chance to shine.", 
@@ -56,10 +56,10 @@ const positiveQuotes = [
  * Fonction pour récupérer la citation du jour selon la langue
  */
 function getDailyQuote(lang) {
-    const today = new Date();
+    var today = new Date();
     // On utilise le jour de l'année pour que la citation change chaque jour
-    const dayOfYear = Math.floor((today - new Date(today.getFullYear(), 0, 0)) / (1000 * 60 * 60 * 24));
-    const index = dayOfYear % positiveQuotes.length;
+    var dayOfYear = Math.floor((today - new Date(today.getFullYear(), 0, 0)) / (1000 * 60 * 60 * 24));
+    var index = dayOfYear % positiveQuotes.length;
     
     // On retourne la citation dans la langue demandée (ou fr par défaut)
     return positiveQuotes[index][lang] || positiveQuotes[index]['fr'];
