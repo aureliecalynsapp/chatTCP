@@ -2,38 +2,44 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-  <script src="translations.js"></script>
+	<script src="translations.js"></script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CGU - Messagerie Sécurisée</title>
 	<link rel="stylesheet" href="style.css">
 </head>
-<body-cgu>
-    <div class="card">
-        <h1 id="cgu_main_title"></h1>
-        <p><i id="last_update"></i></p>
+<body>
+    <div id="cgu-container">
+		<div class="card">
+			<h1 id="cgu_main_title"></h1>
+			<p><i id="last_update"></i></p>
 
-        <section>
-            <h2 id="cgu_sec1_title"></h2>
-            <p id="cgu_sec1_text"></p>
-        </section>
+			<section>
+				<h2 id="cgu_sec1_title"></h2>
+				<p id="cgu_sec1_text"></p>
+			</section>
 
-        <section>
-            <h2 id="cgu_sec2_title"></h2>
-            <div class="important" id="cgu_sec2_text"></div>
-        </section>
+			<section>
+				<h2 id="cgu_sec2_title"></h2>
+				<div class="important" id="cgu_sec2_text"></div>
+			</section>
 
-        <section>
-            <h2 id="cgu_sec3_title"></h2>
-            <p id="cgu_sec3_text"></p>
-        </section>
+			<section>
+				<h2 id="cgu_sec3_title"></h2>
+				<p id="cgu_sec3_text"></p>
+			</section>
 
-        <section>
-            <h2 id="cgu_sec4_title"></h2>
-            <p id="cgu_sec4_text"></p>
-        </section>
-        
-    </div>
+			<section>
+				<h2 id="cgu_sec4_title"></h2>
+				<p id="cgu_sec4_text"></p>
+			</section>
+			
+		</div>
+	</div>
+	
 	<script>
+	
+        var chatContainer = document.getElementById('cgu-container');
+		
 		// On attend que toute la page et les scripts externes (translations.js) soient chargés
 		window.onload = function() {
 			// 1. Récupérer la langue dans l'URL (ex: ?lang=zh)
@@ -70,5 +76,5 @@
 			});
 		};
 	</script>
-</body-cgu>
+</body>
 </html>
