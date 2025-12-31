@@ -5,6 +5,10 @@
     <meta charset="UTF-8">
     <script src="translations.js"></script>
 	<script src="quotes.js"></script>
+	<script src="/socket.io/socket.io.js"></script>
+	<script src="security.js"></script>
+	<script src="ui.js"></script>
+	<script src="socket-logic.js"></script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="style.css">
 
@@ -67,6 +71,11 @@
             </div>
 			
         </div>
+		<div id="chat-wrapper">
+			<button id="load-more-btn" style="width:100%; background:none; border:none; cursor:pointer; display:none;">
+				Charger les messages précédents...
+			</button>
+		</div>
         <ul id="messages"></ul>
         <div id="typing-indicator"></div>
         <form id="form">
@@ -75,7 +84,7 @@
             <input type="file" id="file-input" accept="image/*" style="display:none;">
 
             <textarea id="input" placeholder="Écrivez un message..." rows="1"></textarea>
-            <button type="submit">Envoyer</button>
+            <button id="send-btn" type="submit">Envoyer</button>
         </form>
     </div>
 
@@ -89,83 +98,61 @@
         var typingIndicator = document.getElementById('typing-indicator');
         var SECRET_KEY = "";
         var myPseudo = "";
-        var typingTimeout;
-    
-        // --- 1. SÉCURITÉ D'ACCÈS ---
-		// --- DÉTECTION DE LA LANGUE POUR LES PROMPTS ---
-
-		// --- 1. SÉCURITÉ D'ACCÈS TRADUITE ---
-		function startSecurityProcess() {			
-			var lang = localStorage.getItem('preferred-lang') || (navigator.language.startsWith('fr') ? 'fr' : 'en');
-			var t = translations[lang] || translations['fr'];
-
-			var pass = prompt(t.prompt_password);
-
-			if (pass === "TCPAJ") {
-				SECRET_KEY = prompt(t.prompt_secret_key);
-				
-				if (!SECRET_KEY) {
-					alert(t.alert_key_mandatory);
-					return;
-				}
-
-				myPseudo = prompt(t.prompt_pseudo) || "Anonyme";
-
-				// --- C'EST ICI QU'ON LANCE LA CONNEXION ---
-				socket = io(); // On initialise la connexion seulement maintenant !
-
-				// On définit les écouteurs AVANT de faire le join
-				setupSocketListeners(); 
-
-				document.getElementById('welcome-screen').style.display = 'none';
-				document.getElementById('chat-container').style.display = 'flex';
-
-				const myTZ = Intl.DateTimeFormat().resolvedOptions().timeZone;
-				socket.emit('join', myPseudo, myTZ);
-				
-			} else {
-				alert(t.alert_access_denied);
+        var typingTimeout;        
+		
+		// Capture les erreurs JavaScript globales
+		window.onerror = function(message, source, lineno, colno, error) {
+			const errorData = {
+				message: message,
+				source: source,
+				line: lineno,
+				pseudo: typeof myPseudo !== 'undefined' ? myPseudo : 'Inconnu'
+			};
+			// Envoie l'erreur au serveur via le socket
+			if (typeof socket !== 'undefined') {
+				socket.emit('client error', errorData);
 			}
-		}
+		};
+        
+    	// Initialisation au chargement
+    	document.addEventListener('DOMContentLoaded', () => {
+    		const selector = document.getElementById('lang-select');
+    		if (selector) {
+    			const savedLang = localStorage.getItem('preferred-lang') || 'fr';
+    			selector.value = savedLang;
+    			applyLanguage(savedLang);
     
-        // --- 2. FONCTION DE FORMATEUR DE DATE (29 Dec 18:05) ---
-        function getNowFormatted() {
-            var now = new Date();
-            var options = { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' };
-            // 'en-GB' donne le format Jour Mois Heure sans virgules inutiles
-            return now.toLocaleDateString('en-GB', options).replace(',', '');
-        }
+    			selector.addEventListener('change', (e) => {
+    				applyLanguage(e.target.value);
+    			});
+    		} else {
+    			console.error("Le sélecteur 'lang-selector' est introuvable !");
+    		}
+    	});
     
-        // --- 3. FONCTION D'AFFICHAGE DES MESSAGES ---
-		function addMessage(data, side) {
+        // FONCTION D'AFFICHAGE DES MESSAGES ---
+		function addMessage(data, side, isPrepend = false) {
 			var item = document.createElement('li');
 			item.classList.add('message', side);
 			
 			let displayText = "";
 			let displayImage = null;
 
-			// --- LOGIQUE DE DÉCHIFFREMENT SÉCURISÉE ---
+			// --- LOGIQUE DE DÉCHIFFREMENT (Ton code inchangé) ---
 			if (data.isEncrypted && SECRET_KEY) {
 				try {
-					// A. Gestion du TEXTE (On ne déchiffre QUE s'il y a du contenu)
 					if (data.text && data.text.length > 0) {
 						var textBytes = CryptoJS.AES.decrypt(data.text, SECRET_KEY);
 						var decryptedText = textBytes.toString(CryptoJS.enc.Utf8);
 						displayText = decryptedText || "[Erreur de clé]";
 					}
-
-					// B. Gestion de l'IMAGE
 					if (data.image) {
-						// Si c'est déjà du clair (envoi local), on garde tel quel
 						if (data.image.startsWith('data:image')) {
 							displayImage = data.image;
 						} else {
-							// Sinon, c'est du chiffré, on déchiffre
 							var imgBytes = CryptoJS.AES.decrypt(data.image, SECRET_KEY);
 							var decryptedImg = imgBytes.toString(CryptoJS.enc.Utf8);
 							displayImage = decryptedImg || null;
-							
-							// Si l'image déchiffrée est vide, c'est une erreur de clé
 							if (!displayImage) displayText = "[Clé image incorrecte]";
 						}
 					}
@@ -174,20 +161,17 @@
 					displayText = "[Message illisible]"; 
 				}
 			} else {
-				// Mode non-chiffré (historique ancien ou texte simple)
 				displayText = data.text || "";
 				displayImage = data.image || null;
 			}
 
-			// --- LE RESTE DU CODE (AFFICHAGE) ---
+			// --- LOGIQUE D'AFFICHAGE (Ton code inchangé) ---
 			var color = getHashColor(data.pseudo || "Anonyme");
 			var nameStyle = (side === 'me') ? 'display:none' : `color:${color}; font-weight:bold; font-size:0.8em; margin-bottom:3px;`;
 			var imageHtml = displayImage ? `<img src="${displayImage}" style="max-width:100%; border-radius:10px; margin-top:5px; display:block;">` : "";
-
 			var tickContent = (data.read) ? '✓✓' : '✓';
 			var tickColor = (data.read) ? 'color: #3498db;' : '';
-			var statusCheckHtml = (side === 'me') ? 
-				`<span class="status-check" id="tick-${data.id || Date.now()}" style="${tickColor}">${tickContent}</span>` : "";
+			var statusCheckHtml = (side === 'me') ? `<span class="status-check" id="tick-${data.id || Date.now()}" style="${tickColor}">${tickContent}</span>` : "";
 
 			item.innerHTML = `
 				<div style="${nameStyle}">${data.pseudo || 'Anonyme'}</div>
@@ -201,12 +185,20 @@
 				</div>
 			`;
 
-			document.getElementById('messages').appendChild(item);
+			// --- LOGIQUE D'INSERTION (C'est ici que ça change) ---
 			const messagesList = document.getElementById('messages');
-			messagesList.scrollTop = messagesList.scrollHeight;
+
+			if (isPrepend) {
+				// On insère tout en haut de la liste <ul>
+				messagesList.prepend(item); 
+			} else {
+				// On ajoute en bas normalement
+				messagesList.appendChild(item);
+				messagesList.scrollTop = messagesList.scrollHeight;
+			}
 		}
     
-        // --- 4. ENVOI DE TEXTE ---
+        // ENVOI DE TEXTE ---
         form.addEventListener('submit', function(e) {
           e.preventDefault();
           if (input.value.trim()) {
@@ -223,7 +215,7 @@
           }
         });
     
-        // --- 5. IHM : ENTRÉE ET AGRANDISSEMENT AUTO ---
+        // IHM : ENTRÉE ET AGRANDISSEMENT AUTO ---
         input.addEventListener('keydown', function(e) {
           if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
@@ -239,39 +231,52 @@
             typingTimeout = setTimeout(() => socket.emit('stop typing'), 5000);
         });
     
-        // --- 6. ENVOI DE PHOTOS CHIFFRÉES ---
+        // ENVOI DE PHOTOS CHIFFRÉES AVEC COMPRESSION ---
 		document.getElementById('file-input').addEventListener('change', function(e) {
 			const file = e.target.files[0];
 			if (!file) return;
 
-			const reader = new FileReader();
-			reader.onload = function(event) {
-				const rawImageData = event.target.result; // C'est le Base64 de l'image
-
-				// 1. On chiffre l'image avec la clé AES
-				// On utilise la même fonction encrypt que pour tes messages texte
-				const encryptedImage = CryptoJS.AES.encrypt(rawImageData, SECRET_KEY).toString();;
-
-				const imageData = {
-					id: 'img-' + Date.now(),
-					text: "", 
-					image: encryptedImage,    // On envoie la version CHIFFRÉE
-					isEncrypted: true,        // On passe à TRUE
-					time: getNowFormatted(),
-					pseudo: myPseudo
+			// --- CONDITION SPÉCIALE GIF ---
+			if (file.type === "image/gif") {
+				const reader = new FileReader();
+				reader.onload = function(event) {
+					const rawImageData = event.target.result;
+					// On chiffre directement le GIF sans passer par la compression
+					const encryptedImage = CryptoJS.AES.encrypt(rawImageData, SECRET_KEY).toString();
+					
+					const imageData = {
+						id: 'img-' + Date.now(),
+						text: "", 
+						image: encryptedImage,
+						isEncrypted: true,
+						time: getNowFormatted(),
+						pseudo: myPseudo
+					};
+					addMessage({ ...imageData, image: rawImageData }, 'me');
+					socket.emit('chat message', imageData);
 				};
-
-				// 2. On l'affiche pour SOI (en local, on peut afficher l'original pour aller plus vite)
-				// Mais attention : addMessage doit savoir gérer les images chiffrées/déchiifrées
-				addMessage({ ...imageData, image: rawImageData }, 'me');
-
-				// 3. On envoie le paquet sécurisé au serveur
-				socket.emit('chat message', imageData);
-			};
-			reader.readAsDataURL(file);
+				reader.readAsDataURL(file);
+			} 
+			// --- POUR TOUT LE RESTE (JPG, PNG) On compresse ---
+			else {
+				compressImage(file, function(compressedBase64) {
+					const encryptedImage = CryptoJS.AES.encrypt(compressedBase64, SECRET_KEY).toString();
+					const imageData = {
+						id: 'img-' + Date.now(),
+						text: "", 
+						image: encryptedImage,
+						isEncrypted: true,
+						time: getNowFormatted(),
+						pseudo: myPseudo
+					};
+					addMessage({ ...imageData, image: compressedBase64 }, 'me');
+					socket.emit('chat message', imageData);
+				});
+			}
+			e.target.value = ''; // Reset l'input
 		});
     
-        // --- 7. EMOJIS ---
+        // EMOJIS ---
         const picker = new EmojiMart.Picker({
             locale: 'fr',
             onEmojiSelect: (emoji) => {
@@ -296,163 +301,20 @@
         document.addEventListener('click', (e) => {
             if (!picker.contains(e.target) && e.target.id !== 'emoji-btn') picker.style.display = 'none';
         });
-    
-        // --- 8. SOCKETS ---
-		function setupSocketListeners() {
-			// On vérifie que le socket existe bien
-			if (!socket) return;
-				
-			socket.on('load history', (h) => {
-			  messages.innerHTML = '';
-			  h.forEach(m => {addMessage(m, m.pseudo === myPseudo ? 'me' : 'them');
-				// Si le message vient de quelqu'un d'autre, on confirme la lecture
-				if (m.pseudo !== myPseudo && m.id) {
-					socket.emit('message read', m.id);
-					}
-				});
-			});
-				
-			socket.on('chat message', function(data) {
-				// On s'assure que data est un objet
-				let msgData = (typeof data === 'object') ? data : { text: data, pseudo: 'Anonyme', time: getNowFormatted(), id: Date.now() };
+    	
 		
-				// CORRECTION : On utilise myPseudo (ta variable globale)
-				if (msgData.pseudo !== myPseudo) { 
-					console.log("Réception d'un message de : " + msgData.pseudo);
-					addMessage(msgData, 'them');
-					
-					// On informe le serveur qu'on a lu le message
-					if (msgData.id) {
-						socket.emit('message read', msgData.id);
-					}
-				}
-			});
-				
-			socket.on('user typing', (pseudo) => {
-				const lang = localStorage.getItem('preferred-lang') || 'fr';
-				// On vérifie que translations existe avant d'afficher
-				if (typeof translations !== 'undefined' && translations[lang]) {
-					typingIndicator.textContent = pseudo + translations[lang].typing;
-				}
-			});
-			
-			socket.on('user stop typing', () => { typingIndicator.textContent = ""; });
-		
-			socket.on('user read message', (msgId) => {
-				const tick = document.getElementById(`tick-${msgId}`);
-				if (tick) {
-					tick.innerText = '✓✓'; // Passage au double check
-					tick.style.color = '#3498db'; // Passage au bleu
-				}
-			});
-			
-			socket.on('update users timezones', (allTZ) => {
-				// On cherche le fuseau de la personne qui n'est pas "Moi"
-				for (let user in allTZ) {
-					if (user !== myPseudo) {
-						themTZ = allTZ[user];
-					}
-				}
-			});
-		}
-        
     	
-    
-        function getHashColor(str) {
-          if(!str) return '#000';
-          var hash = 0; for (var i = 0; i < str.length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash);
-          var c = '#'; for (var i = 0; i < 3; i++) c += ('00' + ((hash >> (i * 8)) & 0xFF).toString(16)).slice(-2);
-          return c;
-        }
-    	
-    	// Fonction pour appliquer la langue	
-    	function applyLanguage(lang) {
-    		console.log("Changement de langue vers :", lang); // Pour vérifier dans la console (F12)
-    		
-    		const t = translations[lang];
-    		if (!t) {
-    			console.error("Langue non trouvée dans translations.js :", lang);
-    			return;
-    		}
-    
-    		// Liste des IDs à mettre à jour
-    		const mapping = {
-    			'txt-header-title': t.header_title,
-    			'txt-view-cgu': t.view_cgu,
-				'txt-welcome-title': t.welcome_title, // NOUVEAU
-				'enter-chat-btn': t.enter_chat,      // NOUVEAU
-				'quote-intro': t.quote_intro,        // NOUVEAU (si tu ajoutes ce span)
-    			'input': 'placeholder' // Cas spécial pour le placeholder
-    		};
-    
-    		for (let id in mapping) {
-    			const el = document.getElementById(id);
-    			if (el) {
-    				if (mapping[id] === 'placeholder') {
-    					el.placeholder = t.input_placeholder;
-    				} else {
-    					el.innerText = mapping[id];
-    				}
-    			} else {
-    				console.warn("Élément introuvable : " + id);
-    			}
-    		}
-			// Mettre à jour la citation du jour (depuis quotes.js)
-			if (typeof displayDailyQuote === 'function') {
-				displayDailyQuote(lang);
-			}
-    
-			// Sauvegarder la langue
-			localStorage.setItem('preferred-lang', lang);
-			
-			// SYNCHRONISATION : On s'assure que les deux sélecteurs affichent la même langue
-			// On cherche tous les menus de langue et on leur impose la valeur
-			const selectors = ['lang-select-home', 'lang-select']; 
-			selectors.forEach(id => {
-				const el = document.getElementById(id);
-				if (el) {
-					el.value = lang; // Force l'affichage sur "en", "fr" ou "zh"
-				}
-			});
-	
-    		// Mise à jour du bouton envoyer (recherche par balise si pas d'ID)
-    		const sendBtn = document.querySelector('#form button:not([type="button"])');
-    		if (sendBtn) sendBtn.innerText = t.send_btn;
-						    		
-    		// On met à jour le lien vers les CGU pour inclure la langue
-    		const cguLink = document.getElementById('txt-view-cgu');
-    		if(cguLink) {
-    			cguLink.href = `/cgu?lang=${lang}`;
-    			}
-    	}
-    
-    	// Initialisation au chargement
-    	document.addEventListener('DOMContentLoaded', () => {
-    		const selector = document.getElementById('lang-select');
-    		if (selector) {
-    			const savedLang = localStorage.getItem('preferred-lang') || 'fr';
-    			selector.value = savedLang;
-    			applyLanguage(savedLang);
-    
-    			selector.addEventListener('change', (e) => {
-    				applyLanguage(e.target.value);
-    			});
-    		} else {
-    			console.error("Le sélecteur 'lang-selector' est introuvable !");
-    		}
-    	});
-    	
-    	/* DARK MODE */
+    	// DARK MODE ---
     	const themeToggle = document.getElementById('theme-toggle');
     
-    	// 1. Charger le thème sauvegardé
+    	// Charger le thème sauvegardé
     	const savedTheme = localStorage.getItem('theme') || 'light';
     	if (savedTheme === 'dark') {
     		document.documentElement.setAttribute('data-theme', 'dark');
     		themeToggle.innerText = '☀️';
     	}
     
-    	// 2. Écouter le clic sur le bouton
+    	// Écouter le clic sur le bouton
     	themeToggle.addEventListener('click', () => {
     		const isDark = document.documentElement.hasAttribute('data-theme');
     		if (isDark) {
@@ -466,65 +328,13 @@
     		}
     	});
 		
-		/* Horloge */
-		let themTZ = "Asia/Shanghai"; // Par défaut
-
-		
-		function updateDynamicClocks() {
-			const now = new Date();
-
-			// 1. Détection automatique de MA ville
-			const myTZ = Intl.DateTimeFormat().resolvedOptions().timeZone;
-			const myCity = myTZ.split('/').pop().replace('_', ' ');
-			const themCity = themTZ.split('/').pop().replace('_', ' ');
-
-			const zones = [
-				{ id: 'me-analog', tz: myTZ, nameId: 'me-city-name', name: myCity },
-				{ id: 'them-analog', tz: themTZ, nameId: 'them-city-name', name: themCity }
-			];
-
-			zones.forEach(zone => {
-				try {
-					const timeStr = now.toLocaleTimeString('en-US', { 
-						timeZone: zone.tz, hour12: false, hour: '2-digit', minute: '2-digit' 
-					});
-					const [hours, minutes] = timeStr.split(':').map(Number);
-
-					const hourDeg = (hours % 12) * 30 + minutes * 0.5;
-					const minuteDeg = minutes * 6;
-
-					const clockEl = document.getElementById(zone.id);
-					clockEl.style.borderColor = zone.color;
-					clockEl.querySelector('.hour').style.transform = `translateX(-50%) rotate(${hourDeg}deg)`;
-					clockEl.querySelector('.minute').style.transform = `translateX(-50%) rotate(${minuteDeg}deg)`;
-					//clockEl.querySelector('.hour').style.backgroundColor = zone.color;
-					
-					document.getElementById(zone.nameId).innerText = zone.name;
-				} catch (e) {
-					console.error("Erreur sur le fuseau :", zone.tz);
-				}
-			});
-		}
-
-		setInterval(updateDynamicClocks, 1000);
-		updateDynamicClocks();
-		
-		/* Pensée du jour */
-		function displayDailyQuote(forcedLang) {
-			// Si on passe une langue, on l'utilise, sinon on cherche dans le stockage, sinon 'fr'
-			const currentLang = forcedLang || localStorage.getItem('preferred-lang') || 'fr';
-			
-			// On vérifie si la fonction getDailyQuote (de quotes.js) existe
-			if (typeof getDailyQuote === 'function') {
-				const quoteText = getDailyQuote(currentLang);
-				const quoteEl = document.getElementById('quote-text');
-				if (quoteEl) {
-					quoteEl.innerText = quoteText;
-				}
-			}
-		}
+		// CHARGEMENT MESSAGE ANCIEN ---
+		// Événement clic sur le bouton
+		document.getElementById('load-more-btn').addEventListener('click', () => {
+			const currentCount = document.querySelectorAll('.message').length;
+			socket.emit('load more', currentCount);
+		});
 		
     </script>
 </body>
-
 </html>

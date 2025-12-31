@@ -12,15 +12,17 @@ const io = new Server(server, {
 
 const DATA_FILE = './messages.json';
 let messagesSave = [];
-const userTimezones = {}; // Stockage des fuseaux hors de l'écouteur
+const userTimezones = {};
 
-// Chargement initial
+// Chargement initial (On charge TOUT l'historique)
 try {
     if (fs.existsSync(DATA_FILE)) {
-        messagesSave = JSON.parse(fs.readFileSync(DATA_FILE, 'utf-8'));
+        const fileContent = fs.readFileSync(DATA_FILE, 'utf-8');
+        messagesSave = fileContent ? JSON.parse(fileContent) : [];
     }
 } catch (err) {
     console.error("Erreur lecture historique:", err);
+    messagesSave = [];
 }
 
 app.get('/', (req, res) => { res.sendFile(__dirname + '/index.html'); });
@@ -28,17 +30,38 @@ app.get('/cgu', (req, res) => { res.sendFile(__dirname + '/cgu.html'); });
 
 io.on('connection', (socket) => {
     console.log('Utilisateur connecté');
+	
+	// Écoute les erreurs envoyées par les clients
+    socket.on('client error', (data) => {
+        console.log(`❌ ERREUR CLIENT [${data.pseudo}]: ${data.message} à la ligne ${data.line} dans ${data.source}`);
+    });
     
-    // 1. Gestion de l'arrivée (Pseudo + Timezone)
+    // 1. Gestion de l'arrivée
     socket.on('join', (pseudo, timezone) => {
         socket.pseudo = pseudo;
         userTimezones[pseudo] = timezone;
         io.emit('update users timezones', userTimezones);
-        // On envoie l'historique seulement après le "join" pour être sûr
-        socket.emit('load history', messagesSave);
+        
+        // --- MODIFICATION ICI : On n'envoie que les 20 derniers à la connexion ---
+        const last20 = messagesSave.slice(-20);
+        socket.emit('load history', last20);
     });
 
-    // 2. Gestion des messages (Texte et Images chiffrées)
+    // --- NOUVEAU : Gestion du bouton "Charger plus" ---
+    socket.on('load more', (currentCount) => {
+        const total = messagesSave.length;
+        const end = total - currentCount;
+        const start = Math.max(0, end - 20);
+
+        if (end > 0) {
+            const olderBatch = messagesSave.slice(start, end);
+            socket.emit('older messages', olderBatch);
+        } else {
+            socket.emit('older messages', []);
+        }
+    });
+
+    // 2. Gestion des messages
     socket.on('chat message', (data) => {
         messagesSave.push(data);
 
@@ -55,7 +78,7 @@ io.on('connection', (socket) => {
             }
         }
 
-        fs.writeFile(DATA_FILE, JSON.stringify(messagesSave), (err) => {
+       fs.writeFile(DATA_FILE, JSON.stringify(messagesSave), (err) => {
             if (err) console.error("Erreur sauvegarde:", err);
         });
         

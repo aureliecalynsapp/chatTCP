@@ -25,7 +25,8 @@ const translations = {
         alert_key_mandatory: "Clé obligatoire !",
 		welcome_title: "Bienvenue",
         enter_chat: "Accéder au Chat Sécurisé",
-        quote_intro: "La pensée positive du jour :"
+        quote_intro: "La pensée positive du jour :",
+		load_more: "Charger les messages précédents..."
     },
     en: {
         header_title: "💬 My Secure Chat",
@@ -53,7 +54,8 @@ const translations = {
         alert_key_mandatory: "Key is mandatory!",
 		welcome_title: "Welcome",
         enter_chat: "Enter Secure Chat",
-        quote_intro: "Today's positive thought:"
+        quote_intro: "Today's positive thought:",
+		load_more: "Load previous messages..."
     },
     zh: {
         header_title: "💬 我的安全聊天",
@@ -81,6 +83,7 @@ const translations = {
         alert_key_mandatory: "必须输入密钥！",
 		welcome_title: "欢迎",
         enter_chat: "进入加密聊天室",
-        quote_intro: "今日正能量："
+        quote_intro: "今日正能量：",
+		load_more: "加载历史消息..."
     }
 };
