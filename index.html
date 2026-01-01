@@ -19,7 +19,7 @@
 	<div id="welcome-screen">
 		<div style="position: fixed; bottom: 10px; width: 100%; text-align: center; pointer-events: none;">
 			<span style="background: rgba(0,0,0,0.05); padding: 2px 8px; border-radius: 10px; color: #bbb; font-size: 9px; letter-spacing: 1px;">
-				RELEASE 1.4.1
+				RELEASE 1.4.2
 			</span>
 		</div>
 		<div class="lang-selector-home">
@@ -108,6 +108,18 @@
         var SECRET_KEY = "";
         var myPseudo = "";
         var typingTimeout;        
+				
+		io.on('connection', (socket) => {
+			socket.on('check-auth', (submittedPassword) => {
+				var correctPassword = process.env.CHAT_PASSWORD;
+				
+				if (submittedPassword === correctPassword) {
+					socket.emit('auth-result', { success: true });
+				} else {
+					socket.emit('auth-result', { success: false });
+				}
+			});
+		});
 		
 		// Capture les erreurs JavaScript globales
 		window.onerror = function(message, source, lineno, colno, error) {
