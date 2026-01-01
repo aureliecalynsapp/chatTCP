@@ -31,6 +31,17 @@ app.get('/cgu', (req, res) => { res.sendFile(__dirname + '/cgu.html'); });
 io.on('connection', (socket) => {
     console.log('Utilisateur connecté');
 	
+	// authentification
+	socket.on('check-auth', (submittedPassword) => {
+		var correctPassword = process.env.CHAT_PASSWORD;
+				
+		if (submittedPassword === correctPassword) {
+			socket.emit('auth-result', { success: true });
+		} else {
+			socket.emit('auth-result', { success: false });
+		}
+	});		
+	
 	// Écoute les erreurs envoyées par les clients
     socket.on('client error', (data) => {
         console.log(`❌ ERREUR CLIENT [${data.pseudo}]: ${data.message} à la ligne ${data.line} dans ${data.source}`);
