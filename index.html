@@ -19,7 +19,7 @@
 	<div id="welcome-screen">
 		<div style="position: fixed; bottom: 10px; width: 100%; text-align: center; pointer-events: none;">
 			<span style="background: rgba(0,0,0,0.05); padding: 2px 8px; border-radius: 10px; color: #bbb; font-size: 9px; letter-spacing: 1px;">
-				RELEASE 1.4.3
+				RELEASE 1.4.4
 			</span>
 		</div>
 		<div class="lang-selector-home">
@@ -389,14 +389,24 @@
 		voiceBtn.addEventListener('click', async () => {
 			if (!mediaRecorder || mediaRecorder.state === "inactive") {
 				// DÉMARRER L'ENREGISTREMENT
-				var stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+				var stream = await navigator.mediaDevices.getUserMedia({ audio: {
+					echoCancellation: false, 
+					noiseSuppression: false, 
+					autoGainControl: false,  
+					sampleRate: 44100
+					} 
+				});
 				let mimeType = 'audio/mp4'; // Idéal pour iPhone/Mac et Windows
 
 				if (!MediaRecorder.isTypeSupported(mimeType)) {
 					mimeType = 'audio/webm;codecs=opus'; // Repli pour certains navigateurs Linux/Android
 				}
 				try {
-					mediaRecorder = new MediaRecorder(stream, { mimeType: mimeType });
+					var recorderOptions = {
+						mimeType: mimeType,
+						audioBitsPerSecond: 128000
+					};
+					mediaRecorder = new MediaRecorder(stream, recorderOptions);
 					console.log("Recorder initialisé avec le format :", mimeType);
 				} catch (e) {
 					console.log("Format spécifique non supporté, utilisation du format par défaut");
@@ -411,12 +421,10 @@
 					socket.emit('stop typing');
 					var audioBlob = new Blob(audioChunks, { type: mediaRecorder.mimeType });
 					
-					// Conversion en Base64 pour le chiffrer comme un texte !
 					var reader = new FileReader();
 					reader.readAsDataURL(audioBlob);
 					reader.onloadend = () => {
 						var base64Audio = reader.result;
-						// ICI : Appelle ta fonction d'envoi habituelle
 						sendMediaMessage(base64Audio, 'voice'); 
 					};
 				};
