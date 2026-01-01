@@ -1,6 +1,7 @@
 //ui.js
 let myTZ = Intl.DateTimeFormat().resolvedOptions().timeZone; // Ta zone
 let themTZ = myTZ; // Par défaut, on considère que l'autre est au même endroit
+let timerInterval;
 
 // FONCTION DE FORMATEUR DE DATE (29 Dec 18:05) ---
 function getNowFormatted() {
@@ -187,6 +188,51 @@ function compressImage(file, callback) {
         };
     };
 	console.log("Fichier compressé");
+}
+
+function sendMediaMessage(base64Data, type) {
+    if (!SECRET_KEY) return;
+
+    // 1. Chiffrement du Base64 (l'audio est traité comme un gros texte)
+    var encryptedAudio = CryptoJS.AES.encrypt(base64Data, SECRET_KEY).toString();
+    
+    var data = {
+        id: 'voice-' + Date.now(),
+        type: 'voice', // On précise le type
+        text: "", 
+        audio: encryptedAudio, // On stocke l'audio chiffré ici
+        isEncrypted: true,
+        time: getNowFormatted(),
+        pseudo: myPseudo
+    };
+
+    // 2. Affichage local immédiat (avec l'audio non chiffré pour la rapidité)
+    addMessage({ ...data, audio: base64Data }, 'me');
+    
+    // 3. Envoi au serveur
+    socket.emit('chat message', data);
+}
+
+function dataURLtoBlob(dataurl) {
+    try {
+        var arr = dataurl.split(','), mime = arr[0].match(/:(.*?);/)[1],
+            bstr = atob(arr[1]), n = bstr.length, u8arr = new Uint8Array(n);
+        while(n--){ u8arr[n] = bstr.charCodeAt(n); }
+        return new Blob([u8arr], {type:mime});
+    } catch(e) {
+        console.error("Erreur conversion Blob:", e);
+        return null;
+    }
+}
+
+function startTimer() {
+    let seconds = 0;
+    const timerEl = document.getElementById('timer');
+    timerEl.innerText = "0s";
+    timerInterval = setInterval(() => {
+        seconds++;
+        timerEl.innerText = seconds + "s";
+    }, 1000);
 }
 
 // On attend que le HTML soit chargé

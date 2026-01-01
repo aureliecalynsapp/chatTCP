@@ -4,8 +4,9 @@ function startSecurityProcess() {
 	var lang = localStorage.getItem('preferred-lang') || (navigator.language.startsWith('fr') ? 'fr' : 'en');
 	var t = translations[lang] || translations['fr']
 	var pass = prompt(t.prompt_password);
+	var secret = process.env.CHAT_PASSWORD;
 
-	if (pass === "TCPAJ") {
+	if (pass === secret) {
 		SECRET_KEY = prompt(t.prompt_secret_key);
 				
 		if (!SECRET_KEY) {

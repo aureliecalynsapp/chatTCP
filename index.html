@@ -3,24 +3,23 @@
 
 <head>
     <meta charset="UTF-8">
+	<script src="crypto-js.min.js"></script>
+	<script src="emoji-browser.js"></script>
     <script src="translations.js"></script>
 	<script src="quotes.js"></script>
 	<script src="/socket.io/socket.io.js"></script>
 	<script src="security.js"></script>
 	<script src="ui.js"></script>
 	<script src="socket-logic.js"></script>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <link rel="stylesheet" href="style.css">
-
-    <script src="https://cdn.jsdelivr.net/npm/emoji-mart@latest/dist/browser.js" ></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js" ></script>
 </head>
 
 <body>
 	<div id="welcome-screen">
 		<div style="position: fixed; bottom: 10px; width: 100%; text-align: center; pointer-events: none;">
 			<span style="background: rgba(0,0,0,0.05); padding: 2px 8px; border-radius: 10px; color: #bbb; font-size: 9px; letter-spacing: 1px;">
-				RELEASE 1.3
+				RELEASE 1.4
 			</span>
 		</div>
 		<div class="lang-selector-home">
@@ -77,19 +76,22 @@
 			
         </div>
 		<div id="chat-wrapper">
-			<button id="load-more-btn" style="width:100%; background:none; border:none; cursor:pointer; display:none;">
+			<button id="load-more-btn" style="background:none; border:none; cursor:pointer; display:none;">
 				Charger les messages précédents...
 			</button>
 		</div>
         <ul id="messages"></ul>
         <div id="typing-indicator"></div>
         <form id="form">
-            <button type="button" id="emoji-btn">😀</button>
-            <label for="file-input" style="cursor:pointer; font-size: 1.5em; padding: 0 10px;">📎</label>
+            <label for="file-input" style="cursor:pointer; font-size: 1.5em; padding: 10px 10px; margin: 5px;">📎</label>
+            <button type="button" id="emoji-btn" style="padding: 10px 10px; margin: 5px;">😀</button>
+			<button type="button" id="voice-btn" style="padding: 10px 10px; margin: 5px;">🎤</button>
+			<div id="recording-status" style="display:none; color:red; font-size:0.8em; margin: 5px;">
+				... <span id="timer">0s</span>
+			</div>
             <input type="file" id="file-input" accept="image/*" style="display:none;">
-
             <textarea id="input" placeholder="Écrivez un message..." rows="1"></textarea>
-            <button id="send-btn" type="submit">Envoyer</button>
+            <button id="send-btn" type="submit" style="padding: 10px 10px; margin: 5px;">Envoyer</button>
         </form>
     </div>
 
@@ -147,6 +149,7 @@
 			
 			let displayText = "";
 			let displayImage = null;
+			let displayAudio = null;
 
 			// --- LOGIQUE DE DÉCHIFFREMENT (Ton code inchangé) ---
 			if (data.isEncrypted && SECRET_KEY) {
@@ -166,6 +169,24 @@
 							if (!displayImage) displayText = "[Clé image incorrecte]";
 						}
 					}
+					if (data.type === 'voice' && data.audio) {
+						try {
+							let rawBase64 = "";
+							if (data.audio.startsWith('data:audio')) {
+								rawBase64 = data.audio;
+							} else {
+								var audioBytes = CryptoJS.AES.decrypt(data.audio, SECRET_KEY);
+								rawBase64 = audioBytes.toString(CryptoJS.enc.Latin1);
+							}
+
+							const blob = dataURLtoBlob(rawBase64);
+							if (blob) {
+								displayAudio = URL.createObjectURL(blob);
+							}
+						} catch (e) {
+							console.error("Erreur technique audio:", e);
+						}
+					}
 				} catch (e) { 
 					console.error("Erreur de déchiffrement :", e);
 					displayText = "[Message illisible]"; 
@@ -173,12 +194,20 @@
 			} else {
 				displayText = data.text || "";
 				displayImage = data.image || null;
+				displayAudio = data.audio || null;
 			}
 
 			// --- LOGIQUE D'AFFICHAGE (Ton code inchangé) ---
 			var color = getHashColor(data.pseudo || "Anonyme");
 			var nameStyle = (side === 'me') ? 'display:none' : `color:${color}; font-weight:bold; font-size:0.8em; margin-bottom:3px;`;
 			var imageHtml = displayImage ? `<img src="${displayImage}" style="max-width:100%; border-radius:10px; margin-top:5px; display:block;">` : "";
+			var audioHtml = displayAudio ? `
+				<audio controls 
+					   preload="metadata" 
+					   src="${displayAudio}" 
+					   onplay="console.log('Lecture en cours...')" 
+					   style="max-width: 100%; margin-top: 5px; height: 35px;">
+				</audio>` : "";
 			var tickContent = (data.read) ? '✓✓' : '✓';
 			var tickColor = (data.read) ? 'color: #3498db;' : '';
 			var statusCheckHtml = (side === 'me') ? `<span class="status-check" id="tick-${data.id || Date.now()}" style="${tickColor}">${tickContent}</span>` : "";
@@ -188,6 +217,7 @@
 				<div class="message-wrapper">
 					<div>${displayText}</div>
 					${imageHtml}
+					${audioHtml}
 				</div>
 				<div class="message-footer" style="display: flex; align-items: center; justify-content: flex-end; gap: 4px;">
 					<span class="time">${data.time || ''}</span>
@@ -289,6 +319,7 @@
         // EMOJIS ---
         var picker = new EmojiMart.Picker({
             locale: 'fr',
+			native: true, // IMPORTANT : évite de charger des dossiers d'images externes
             onEmojiSelect: (emoji) => {
                 input.value += emoji.native;
                 input.dispatchEvent(new Event('input')); 
@@ -343,6 +374,66 @@
 		document.getElementById('load-more-btn').addEventListener('click', () => {
 			var currentCount = document.querySelectorAll('.message').length;
 			socket.emit('load more', currentCount);
+		});
+		
+		// Message vocal
+		let mediaRecorder;
+		let audioChunks = [];
+
+		var voiceBtn = document.getElementById('voice-btn');
+		
+		function stopTimer() {
+			clearInterval(timerInterval);
+		}
+
+		voiceBtn.addEventListener('click', async () => {
+			if (!mediaRecorder || mediaRecorder.state === "inactive") {
+				// DÉMARRER L'ENREGISTREMENT
+				var stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+				let mimeType = 'audio/mp4'; // Idéal pour iPhone/Mac et Windows
+
+				if (!MediaRecorder.isTypeSupported(mimeType)) {
+					mimeType = 'audio/webm;codecs=opus'; // Repli pour certains navigateurs Linux/Android
+				}
+				try {
+					mediaRecorder = new MediaRecorder(stream, { mimeType: mimeType });
+					console.log("Recorder initialisé avec le format :", mimeType);
+				} catch (e) {
+					console.log("Format spécifique non supporté, utilisation du format par défaut");
+					mediaRecorder = new MediaRecorder(stream);
+				}
+				audioChunks = [];
+
+				mediaRecorder.ondataavailable = (event) => audioChunks.push(event.data);
+
+				mediaRecorder.onstop = async () => {
+					stopTimer();
+					socket.emit('stop typing');
+					var audioBlob = new Blob(audioChunks, { type: mediaRecorder.mimeType });
+					
+					// Conversion en Base64 pour le chiffrer comme un texte !
+					var reader = new FileReader();
+					reader.readAsDataURL(audioBlob);
+					reader.onloadend = () => {
+						var base64Audio = reader.result;
+						// ICI : Appelle ta fonction d'envoi habituelle
+						sendMediaMessage(base64Audio, 'voice'); 
+					};
+				};
+
+				mediaRecorder.start();
+				startTimer();
+				socket.emit('typing', myPseudo);
+				voiceBtn.textContent = "🛑";
+				document.getElementById('recording-status').style.display = "inline";
+			} else {
+				// ARRÊTER
+				mediaRecorder.stop();
+				stopTimer();
+				socket.emit('stop typing');
+				voiceBtn.textContent = "🎤";
+				document.getElementById('recording-status').style.display = "none";
+			}
 		});
 		
     </script>
