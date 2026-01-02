@@ -52,7 +52,7 @@ body {
   background : #dcf8c6; color : #075e54;
 }
 #chat-container {
-  display : none; flex-direction : column; height : 100dvh; height: -webkit-fill-available; width: 100%; max-width: 800px; margin: 0 auto; top: 0; left: 0; overflow: hidden; box-shadow: 0 0 15px rgba(0,0,0,0.1); position: absolute;
+  display : none; flex-direction : column; height : 100dvh; height: -webkit-fill-available; width: 100%; max-width: 800px; margin: 0 auto; top: 0; left: 0; overflow: hidden; box-shadow: 0 0 15px rgba(0,0,0,0.1); position: absolute; left: 50%; transform: translateX(-50%);
 }
 #messages {
   flex-grow : 1; overflow-y: auto; list-style: none; list-style-type: none; margin: 0; padding: 10px; display: flex; flex-direction : column; -webkit-overflow-scrolling: touch; 
@@ -172,7 +172,7 @@ p, li {
         display: block !important;
     }
     #chat-container.active {
-        display: flex !important; touch-action: pan-x pan-y !important; width: 100vw !important; max-width: 100% !important; height: 100dvh !important; border-radius: 0 !important; position: fixed !important;
+        display: flex !important; touch-action: pan-x pan-y !important; width: 100vw !important; max-width: 100% !important; height: 100dvh !important; border-radius: 0 !important; position: fixed !important; left: 0 !important; transform: none !important;
 	}
 	#chat-header {
         padding: 5px !important; position: sticky; top: 0; flex-shrink: 0;
