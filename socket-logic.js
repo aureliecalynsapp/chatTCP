@@ -46,6 +46,13 @@ function setupSocketListeners() {
 			if (msgData.id) {
 				socket.emit('message read', msgData.id);
 			}
+		}	
+		// Notification
+		console.log("Message reçu ! État de la page :", document.visibilityState);	
+		if (document.hidden) {
+			var notificationSound = new Audio('/sounds/pop.mp3');
+			notificationSound.play().catch(e => console.log("Le navigateur bloque le son sans interaction"));
+			sendSystemNotification(msgData.pseudo)
 		}
 	});
 		
@@ -119,5 +126,5 @@ function setupSocketListeners() {
 		if (olderMessages.length < 20) btn.style.display = 'none';
 	});
 	
-	
+
 }

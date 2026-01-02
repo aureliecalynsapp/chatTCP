@@ -13,13 +13,15 @@
 	<script src="socket-logic.js"></script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <link rel="stylesheet" href="style.css">
+	<link rel="icon" type="image/png" href="/img/logo.png">
+	<link rel="apple-touch-icon" href="/img/logo.png">
 </head>
 
 <body>
 	<div id="welcome-screen">
 		<div style="position: fixed; bottom: 10px; width: 100%; text-align: center; pointer-events: none;">
 			<span style="background: rgba(0,0,0,0.05); padding: 2px 8px; border-radius: 10px; color: #bbb; font-size: 9px; letter-spacing: 1px;">
-				RELEASE 1.4.4
+				RELEASE 1.5.0
 			</span>
 		</div>
 		<div class="lang-selector-home">
@@ -45,14 +47,14 @@
         <div id="chat-header">
             <div style="font-weight: bold;" id="txt-header-title"></div>
 
-			<div id="clocks-container" style="display: flex; gap: 20px; align-items: center; padding: 10px;">
+			<div id="clocks-container">
 				<div class="clock-unit">
 					<div class="analog-clock" id="them-analog">
 						<div class="hand hour"></div>
 						<div class="hand minute"></div>
 						<div class="center-dot"></div>
 					</div>
-					<div id="them-city-name" style="margin-top: 4px;">--</div>
+					<div id="them-city-name">--</div>
 				</div>
 				<div class="clock-unit">
 					<div class="analog-clock" id="me-analog">
@@ -60,14 +62,14 @@
 						<div class="hand minute"></div>
 						<div class="center-dot"></div>
 					</div>
-					<div id="me-city-name" style="margin-top: 4px;">--</div>
+					<div id="me-city-name">--</div>
 				</div>
 			</div>
 			
             <div class="header-right">
                 <a href="/cgu" target="_blank" id="txt-view-cgu"></a>
                 <button id="theme-toggle" style="cursor:pointer; border:none; background:none; font-size: 1.2rem;">🌙</button>
-                <select id="lang-select" style="cursor: pointer; margin-left: 10px;">
+                <select id="lang-select" style="cursor: pointer; margin: 5px;">
                     <option value="fr">Français 🇫🇷</option>
                     <option value="en">English 🇬🇧</option>
                     <option value="zh">中文 🇨🇳</option>
@@ -82,17 +84,19 @@
 		</div>
         <ul id="messages"></ul>
         <div id="typing-indicator"></div>
-        <form id="form">
-            <label for="file-input" style="cursor:pointer; font-size: 1.5em; padding: 10px 10px; margin: 5px;">📎</label>
-            <button type="button" id="emoji-btn" style="padding: 10px 10px; margin: 5px;">😀</button>
-			<button type="button" id="voice-btn" style="padding: 10px 10px; margin: 5px;">🎤</button>
-			<div id="recording-status" style="display:none; color:red; font-size:0.8em; margin: 5px;">
-				... <span id="timer">0s</span>
-			</div>
-            <input type="file" id="file-input" accept="image/*" style="display:none;">
-            <textarea id="input" placeholder="Écrivez un message..." rows="1"></textarea>
-            <button id="send-btn" type="submit" style="padding: 10px 10px; margin: 5px;">Envoyer</button>
-        </form>
+		<footer id ="chat-footer">
+			<form id="form">
+				<label for="file-input" style="cursor:pointer; font-size: 1.5em; padding: 5px; margin: 5px;">📎</label>
+				<button type="button" id="emoji-btn">😀</button>
+				<button type="button" id="voice-btn">🎤</button>
+				<div id="recording-status" style="display:none; color:red; font-size:0.8em; margin: 5px;">
+					... <span id="timer">0s</span>
+				</div>
+				<input type="file" id="file-input" accept="image/*" style="display:none;">
+				<textarea id="input" placeholder="Écrivez un message..." rows="1"></textarea>
+				<button id="send-btn" type="submit">Envoyer</button>
+			</form>
+		</footer>
     </div>
 
     <script>
@@ -125,7 +129,17 @@
 		};
 		
         //socket.emit('client error', { message: "DEBUG: Script HTML chargé", pseudo: myPseudo });
-		
+		// Dans ton événement de clic pour rejoindre le chat :
+		document.getElementById('enter-chat-btn').addEventListener('click', () => {
+			// On crée un contexte audio ou on joue un son bref pour "déverrouiller"
+			const audio = new Audio('/sounds/pop.mp3');
+			audio.muted = true; // On peut le mettre en muet pour le déverrouillage
+			audio.play().then(() => {
+				console.log("Audio débloqué pour cette session !");
+			}).catch(e => console.log("Déverrouillage échoué"));
+			// À mettre dans ton bouton "Envoyer" ou "Rejoindre"
+			requestNotificationPermission();
+		});
     	// Initialisation au chargement
     	document.addEventListener('DOMContentLoaded', () => {
     		var selector = document.getElementById('lang-select');
@@ -200,13 +214,13 @@
 			// --- LOGIQUE D'AFFICHAGE (Ton code inchangé) ---
 			var color = getHashColor(data.pseudo || "Anonyme");
 			var nameStyle = (side === 'me') ? 'display:none' : `color:${color}; font-weight:bold; font-size:0.8em; margin-bottom:3px;`;
-			var imageHtml = displayImage ? `<img src="${displayImage}" style="max-width:100%; border-radius:10px; margin-top:5px; display:block;">` : "";
+			var imageHtml = displayImage ? `<img src="${displayImage}" style="max-width:100%; border-radius:10px; margin:5px; display:block;">` : "";
 			var audioHtml = displayAudio ? `
 				<audio controls 
 					   preload="metadata" 
 					   src="${displayAudio}" 
 					   onplay="console.log('Lecture en cours...')" 
-					   style="max-width: 100%; margin-top: 5px; height: 35px;">
+					   style="max-width: 100%; margin: 5px; height: 35px;">
 				</audio>` : "";
 			var tickContent = (data.read) ? '✓✓' : '✓';
 			var tickColor = (data.read) ? 'color: #3498db;' : '';
@@ -219,7 +233,7 @@
 					${imageHtml}
 					${audioHtml}
 				</div>
-				<div class="message-footer" style="display: flex; align-items: center; justify-content: flex-end; gap: 4px;">
+				<div class="message-footer" style="display: flex; align-items: center; justify-content: flex-end; margin-top:3px">
 					<span class="time">${data.time || ''}</span>
 					${statusCheckHtml}
 				</div>
@@ -390,10 +404,12 @@
 			if (!mediaRecorder || mediaRecorder.state === "inactive") {
 				// DÉMARRER L'ENREGISTREMENT
 				var stream = await navigator.mediaDevices.getUserMedia({ audio: {
-					echoCancellation: false, 
-					noiseSuppression: false, 
-					autoGainControl: false,  
-					sampleRate: 44100
+					echoCancellation: { ideal: false }, 
+					noiseSuppression: { ideal: false }, 
+					autoGainControl: { ideal: false },  
+					sampleRate: { ideal: 44100 },
+					sampleSize: { ideal: 16 },
+					channelCount: { ideal: 1 }
 					} 
 				});
 				let mimeType = 'audio/mp4'; // Idéal pour iPhone/Mac et Windows
@@ -444,6 +460,37 @@
 			}
 		});
 		
+		document.addEventListener('touchmove', function (event) {
+			if (event.scale !== 1) { event.preventDefault(); }
+		}, { passive: false });
+		document.addEventListener('touchstart', (event) => {
+			if (event.touches.length > 1) {
+				event.preventDefault(); // Bloque le zoom à deux doigts
+			}
+		}, { passive: false });
+
+		document.addEventListener('gesturestart', (event) => {
+			event.preventDefault(); // Bloque le geste de zoom spécifique à Safari
+		});
+		
+		if (window.visualViewport) {
+			window.visualViewport.addEventListener('resize', () => {
+				const viewHeight = window.visualViewport.height;
+				// On force le conteneur à ne pas dépasser la zone visible
+				document.getElementById('chat-container').style.height = `${viewHeight}px`;
+				// On scrolle tout en haut pour que le header reste calé
+				window.scrollTo(0, 0);
+			});
+		}
+		
+		// Arrêter l'alerte dès que l'utilisateur revient sur l'onglet
+		document.addEventListener('visibilitychange', () => {
+			if (!document.hidden) {
+				clearInterval(notificationInterval);
+				notificationInterval = null;
+				document.title = originalTitle;
+			}
+		});
     </script>
 </body>
 </html>

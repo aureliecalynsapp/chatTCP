@@ -2,6 +2,8 @@
 let myTZ = Intl.DateTimeFormat().resolvedOptions().timeZone; // Ta zone
 let themTZ = myTZ; // Par défaut, on considère que l'autre est au même endroit
 let timerInterval;
+let originalTitle = document.title;
+let notificationInterval = null;
 
 // FONCTION DE FORMATEUR DE DATE (29 Dec 18:05) ---
 function getNowFormatted() {
@@ -233,6 +235,27 @@ function startTimer() {
         seconds++;
         timerEl.innerText = seconds + "s";
     }, 1000);
+}
+
+function requestNotificationPermission() {
+    if ("Notification" in window && Notification.permission === "default") {
+        Notification.requestPermission();
+    }
+}
+
+function sendSystemNotification(user) {
+    if (Notification.permission === "granted") {
+        new Notification(`Message de ${user}`, {
+            icon: '/img/logo.png'
+        });
+    }
+    if (!notificationInterval) {
+        let toggle = false;
+		notificationInterval = setInterval(() => {
+			document.title = toggle ? `🟢 ${user}` : originalTitle;
+			toggle = !toggle;
+		}, 1000); 
+	}
 }
 
 // On attend que le HTML soit chargé
