@@ -1,15 +1,13 @@
 //ui.js
-let myTZ = Intl.DateTimeFormat().resolvedOptions().timeZone; // Ta zone
-let themTZ = myTZ; // Par défaut, on considère que l'autre est au même endroit
 let timerInterval;
 let originalTitle = document.title;
 let notificationInterval = null;
+let myTZ = Intl.DateTimeFormat().resolvedOptions().timeZone;
+let themTZ = myTZ; // Par défaut, on considère que l'autre est au même endroit
 
-// FONCTION DE FORMATEUR DE DATE (29 Dec 18:05) ---
 function getNowFormatted() {
 	var now = new Date();
 	var options = { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' };
-	// 'en-GB' donne le format Jour Mois Heure sans virgules inutiles
 	return now.toLocaleDateString('en-GB', options).replace(',', '');
 }
 
@@ -20,70 +18,15 @@ function getHashColor(str) {
 	return c;
 }
 
-// Fonction pour appliquer la langue	
-function applyLanguage(lang) {
-	console.log("Changement de langue vers :", lang); // Pour vérifier dans la console (F12)
-    		
-	var t = translations[lang];
-	if (!t) {
-		console.error("Langue non trouvée dans translations.js :", lang);
-		return;
-	}
-    
-	// Liste des IDs à mettre à jour
-	var mapping = {
-		'txt-header-title': t.header_title,
-		'txt-view-cgu': t.view_cgu,
-		'txt-welcome-title': t.welcome_title,
-		'enter-chat-btn': t.enter_chat,
-		'quote-intro': t.quote_intro,
-		'load-more-btn': t.load_more,
-		'send-btn' : t.send_btn,
-		'input': 'placeholder' // Cas spécial pour le placeholder
-	};
-    
-	for (let id in mapping) {
-		var el = document.getElementById(id);
-		if (el) {
-			if (mapping[id] === 'placeholder') {
-				el.placeholder = t.input_placeholder;
-			} else {
-				el.innerText = mapping[id];
-			}
-		} else {
-			console.warn("Élément introuvable : " + id);
-		}
-	}
-	// Mettre à jour la citation du jour (depuis quotes.js)
-	if (typeof displayDailyQuote === 'function') {
-		displayDailyQuote(lang);
-	}
-    
-	// Sauvegarder la langue
-	localStorage.setItem('preferred-lang', lang);
-			
-	// SYNCHRONISATION : On s'assure que les deux sélecteurs affichent la même langue
-	// On cherche tous les menus de langue et on leur impose la valeur
-	var selectors = ['lang-select-home', 'lang-select']; 
-	selectors.forEach(id => {
-		var el = document.getElementById(id);
-		if (el) {
-			el.value = lang; // Force l'affichage sur "en", "fr" ou "zh"
-		}
-	});
-		
-	// On met à jour le lien vers les CGU pour inclure la langue
-	var cguLink = document.getElementById('txt-view-cgu');
-	if(cguLink) {
-		cguLink.href = `/cgu?lang=${lang}`;
-	}
+function initClockEngine() {
+    setupClocksVisibility(themTZ);
+    setInterval(updateDynamicClocks, 1000);
+    updateDynamicClocks(); 
+    console.log("Moteur des horloges activé !");
 }
 
 function updateDynamicClocks() {
 	var now = new Date();
-
-	// 1. Détection automatique de MA ville
-	var myTZ = Intl.DateTimeFormat().resolvedOptions().timeZone;
 	var myCity = myTZ.split('/').pop().replace('_', ' ');
 	var themCity = themTZ.split('/').pop().replace('_', ' ');
 
@@ -113,7 +56,7 @@ function updateDynamicClocks() {
 		}
 	});
 }
-// Fonction appelée par socket-logic.js quand un partenaire arrive
+
 function setupClocksVisibility(remoteTZ) {
 	if (!remoteTZ) return;
 	
@@ -122,8 +65,8 @@ function setupClocksVisibility(remoteTZ) {
     var clockContainer = document.getElementById('clocks-container');
     if (clockContainer) {
         if (shouldShowClocks(remoteTZ)) {
-            clockContainer.style.display = 'flex'; // ou 'block' selon ton CSS
-            updateDynamicClocks(); // Rafraîchissement immédiat
+            clockContainer.style.display = 'flex';
+            updateDynamicClocks();
             console.log("Fuseaux différents : Affichage des horloges");
         } else {
             clockContainer.style.display = 'none';
@@ -145,21 +88,6 @@ function shouldShowClocks(remoteTZ) {
     }).format(now);
 
     return myTime !== remoteTime;
-}
-
-/* Pensée du jour */
-function displayDailyQuote(forcedLang) {
-	// Si on passe une langue, on l'utilise, sinon on cherche dans le stockage, sinon 'fr'
-	var currentLang = forcedLang || localStorage.getItem('preferred-lang') || 'fr';
-	
-	// On vérifie si la fonction getDailyQuote (de quotes.js) existe
-	if (typeof getDailyQuote === 'function') {
-		var quoteText = getDailyQuote(currentLang);
-		var quoteEl = document.getElementById('quote-text');
-		if (quoteEl) {
-			quoteEl.innerText = quoteText;
-		}
-	}
 }
 
 function compressImage(file, callback) {
@@ -258,17 +186,6 @@ function sendSystemNotification(user) {
 	}
 }
 
-// On attend que le HTML soit chargé
-document.addEventListener('DOMContentLoaded', () => {
-    // 1. Cacher les horloges au démarrage (on attend de savoir qui est en face)
-    var clockContainer = document.getElementById('clocks-container');
-    if (clockContainer) clockContainer.style.display = 'none';
-
-    // 2. Lancer le moteur (il tournera en arrière-plan)
-    setInterval(updateDynamicClocks, 1000);
-
-    console.log("Moteur des horloges prêt (en attente de connexion)");
-});
 
 var debugDiv = document.getElementById('debug-check');
 if (debugDiv) debugDiv.style.display = 'none';

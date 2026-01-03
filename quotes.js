@@ -64,3 +64,15 @@ function getDailyQuote(lang) {
     // On retourne la citation dans la langue demandée (ou fr par défaut)
     return positiveQuotes[index][lang] || positiveQuotes[index]['fr'];
 }
+
+/**
+ * Fonction pour mettre à jour la citation du jour selon la langue
+ */
+function displayDailyQuote(forcedLang) {
+	var currentLang = forcedLang || localStorage.getItem('preferred-lang') || 'fr';
+	var quoteText = getDailyQuote(currentLang);
+	var quoteEl = document.getElementById('quote-text');
+	if (quoteEl) {
+		quoteEl.innerText = quoteText;
+	}
+}

@@ -73,7 +73,7 @@ body {
   padding : 5px 20px; height : 20px; display: flex; flex-direction: column; align-items: center; 
 }
 #load-more-btn {
-  background:none; border:none; cursor:pointer; display:none; font-size: 0.8em; font-style: italic; color: var(--text-color); 
+  background:none; border:none; cursor:pointer; display:none; font-size: 0.8em; font-style: italic; color: var(--text-color); margin: 0 ; padding: 0px
 }
 #chat-footer {
    position : relative; flex-direction: column; flex-shrink: 0; background-color : var(--header-bg); border-top : 1px solid var(--border-color); border-radius : 4px; padding : 10px 15px; align-items : center; box-shadow : 0 2px 5px rgba(0, 0,0, 0.1); z-index : 1000;
