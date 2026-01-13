@@ -14,11 +14,6 @@
 </head>
 <body>
 	<div class="view" id="welcome-view">
-		<div style="position: fixed; bottom: 50px; width: 100%; text-align: center; pointer-events: none; padding-bottom: env(safe-area-inset-bottom);margin-bottom: 10px;">
-			<span style="background: rgba(0,0,0,0.05); padding: 2px 8px; border-radius: 10px; color: #bbb; font-size: 9px; letter-spacing: 1px;">
-				RELEASE 1.7.0
-			</span>
-		</div>
 		<div class="lang">
 			<select class="lang-selector" id="welcome-lang-selector" onchange="onLanguageChange(this.value)">
 				<option value="fr">Français 🇫🇷</option>
@@ -33,6 +28,11 @@
 				<p id="quote-text">--</p>
 			</div>
 			<button id="enter_chat"></button>
+		</div>
+		<div >
+			<span style="background: rgba(0,0,0,0.05); padding: 2px 8px; border-radius: 10px; color: #bbb; font-size: 9px; letter-spacing: 1px">
+				RELEASE 1.7.0
+			</span>
 		</div>
 	</div>
 	<div class="view" id="access-view"></div>
