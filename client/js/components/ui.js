@@ -3,7 +3,7 @@ let timerInterval;
 let originalTitle = document.title;
 let notificationInterval = null;
 let myTZ = Intl.DateTimeFormat().resolvedOptions().timeZone;
-let themTZ = myTZ; // Par défaut, on considère que l'autre est au même endroit
+let themTZ = myTZ;
 
 function getNowFormatted() {
 	var now = new Date();
@@ -60,7 +60,7 @@ function updateDynamicClocks() {
 function setupClocksVisibility(remoteTZ) {
 	if (!remoteTZ) return;
 	
-    themTZ = remoteTZ; // Met à jour la variable globale utilisée par updateDynamicClocks
+    themTZ = remoteTZ;
     
     var clockContainer = document.getElementById('clocks-container');
     if (clockContainer) {
@@ -78,7 +78,6 @@ function setupClocksVisibility(remoteTZ) {
 function shouldShowClocks(remoteTZ) {
     var now = new Date();
     
-    // On compare uniquement HH:mm (sans les secondes)
     var myTime = new Intl.DateTimeFormat('fr-FR', {
         hour: '2-digit', minute: '2-digit', timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
     }).format(now);
@@ -98,7 +97,7 @@ function compressImage(file, callback) {
         img.src = event.target.result;
         img.onload = () => {
             var canvas = document.createElement('canvas');
-            var MAX_WIDTH = 800; // On limite la largeur pour le chat
+            var MAX_WIDTH = 800; 
             let width = img.width;
             let height = img.height;
 
@@ -112,7 +111,6 @@ function compressImage(file, callback) {
             var ctx = canvas.getContext('2d');
             ctx.drawImage(img, 0, 0, width, height);
 
-            // Exportation en JPEG compressé (qualité 0.7)
             var dataUrl = canvas.toDataURL('image/jpeg', 0.7);
             callback(dataUrl);
         };
@@ -123,23 +121,20 @@ function compressImage(file, callback) {
 function sendMediaMessage(base64Data, type) {
     if (!SECRET_KEY) return;
 
-    // 1. Chiffrement du Base64 (l'audio est traité comme un gros texte)
     var encryptedAudio = CryptoJS.AES.encrypt(base64Data, SECRET_KEY).toString();
     
     var data = {
         id: 'voice-' + Date.now(),
-        type: 'voice', // On précise le type
+        type: 'voice',
         text: "", 
-        audio: encryptedAudio, // On stocke l'audio chiffré ici
+        audio: encryptedAudio,
         isEncrypted: true,
         time: getNowFormatted(),
         pseudo: myPseudo
     };
 
-    // 2. Affichage local immédiat (avec l'audio non chiffré pour la rapidité)
     addMessage({ ...data, audio: base64Data }, 'me');
     
-    // 3. Envoi au serveur
     socket.emit('chat message', data);
 }
 
@@ -174,7 +169,7 @@ function requestNotificationPermission() {
 function sendSystemNotification(user) {
     if (Notification.permission === "granted") {
         new Notification(`Message de ${user}`, {
-            icon: '/img/logo.png'
+            icon: '../assets/img/logo.png'
         });
     }
     if (!notificationInterval) {
@@ -185,7 +180,6 @@ function sendSystemNotification(user) {
 		}, 1000); 
 	}
 }
-
 
 var debugDiv = document.getElementById('debug-check');
 if (debugDiv) debugDiv.style.display = 'none';

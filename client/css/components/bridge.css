@@ -1,0 +1,120 @@
+#bridge-view {
+	display : none;
+	width: 100%;
+}
+#bridge-header {
+	align-items : center;
+	display: flex;
+}
+#bridge-header a {
+	color : var(--text-color);
+	text-decoration : none;
+	transition : 0.3s;
+}
+#bridge-header a : hover {
+	background : #dcf8c6;
+	color : #075e54;
+}
+#messages {
+	display: flex;
+	flex-direction : column; 
+	flex-grow : 1;
+	list-style: none;
+	list-style-type: none;
+	margin: 0;
+	overflow-y: auto;
+	padding: 10px;
+	-webkit-overflow-scrolling: touch; 
+}
+.message {
+	border-radius: 10px;
+	box-shadow : 0 1px 1px rgba(0, 0,0, 0.1);
+	margin-bottom : 10px;
+	max-width: 75%;
+	padding: 5px 10px;
+	position: relative;
+	word-wrap: break-word;
+}
+.me {
+	align-self: flex-end;
+	background : var(--bg-color-me);
+	color : var(--text-color-me);
+}
+.them {
+	align-self: flex-start;
+	background : var(--bg-color-them);
+	color : var(--text-color-me);
+}
+#typing-indicator {
+  padding : 5px 20px; font-size: 0.8em; font-style: italic; color: var(--text-color); height : 20px; 
+}
+#bridge-wrapper {
+  padding : 5px 20px; height : 20px; display: flex; flex-direction: column; align-items: center; 
+}
+#load_more_btn {
+  background:none; border:none; cursor:pointer; display:none; font-size: 0.8em; font-style: italic; color: var(--text-color); margin: 0 ; padding: 0px
+}
+#bridge-footer {
+   position : relative; flex-direction: column; flex-shrink: 0; background-color : var(--header-bg); border-top : 1px solid var(--border-color); border-radius : 4px; padding : 10px 15px; align-items : center; box-shadow : 0 2px 5px rgba(0, 0,0, 0.1); z-index : 1000;
+}
+#bridge-form {
+  padding: 5 px 10px; display: flex; align-items: center; 
+}
+#input_placeholder {
+  flex-grow : 1; border: none; padding: 10px 15px; border-radius: 20px; outline: none; resize : none; max-height : 150px; font-family: inherit; font-size: 16px; overflow-y : hidden;
+}
+
+.status-tick {
+  font-size : 0.7em; margin-left : 5px; opacity : 0.6;
+}
+.status-sent {
+  color : var(--text-color);
+}
+.status-received {
+  color : #2ecc71;
+}
+.status-read {
+  color : #3498db;
+}
+.message-content {
+  display : flex; justify-content : space-between; align-items : center;
+}
+.tick {
+  margin-left : 8px; font-size : 0.8em; font-weight : bold;
+}
+.tick-sent {
+  color : #888;
+}
+.tick-read {
+  color : #3498db;
+}
+.message-wrapper {
+  display : flex; align-items : center;
+}
+.status-check {
+  font-size : 0.7em; color : #888; 
+}
+.is-read {
+  color : #3498db !important;
+}
+#clocks-container {
+    color: var(--text-color, #333); display: flex; align-items: center; padding: 5px;
+}
+.clock-unit {
+    display: flex; flex-direction: column; align-items: center; font-size: 0.7em; font-weight: bold;
+}
+.analog-clock {
+    width: 40px; height: 40px; border: 2px solid currentColor; border-radius: 50%; position: relative; background: rgba(255,255,255,0.1); margin: 5px
+}
+.hand {
+    position: absolute; bottom: 50%; left: 50%; background: currentColor; transform-origin: bottom; border-radius: 4px;
+}
+.hour {
+    width: 2px; height: 10px; z-index: 2;
+}
+.minute {
+    width: 1.5px; height: 15px; z-index: 1;
+}
+.center-dot {
+    position: absolute; top: 50%; left: 50%; width: 4px; height: 4px; background: currentColor; border-radius: 50%; transform: translate(-50%, -50%);
+}

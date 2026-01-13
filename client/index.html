@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <script src="i18n/welcome.js"></script>
+	<script src="i18n/quotes.js"></script>
+	<script src="js/load.js"></script>
+	<script src="/socket.io/socket.io.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/components/welcome.css">
+	<link rel="icon" type="image/png" href="assets/img/logo.png">
+	<link rel="apple-touch-icon" href="assets/img/logo.png">
+</head>
+<body>
+	<div class="view" id="welcome-view">
+		<div style="position: fixed; bottom: 10px; width: 100%; text-align: center; pointer-events: none;">
+			<span style="background: rgba(0,0,0,0.05); padding: 2px 8px; border-radius: 10px; color: #bbb; font-size: 9px; letter-spacing: 1px;">
+				RELEASE 1.7.0
+			</span>
+		</div>
+		<div class="lang">
+			<select class="lang-selector" id="welcome-lang-selector" onchange="onLanguageChange(this.value)">
+				<option value="fr">Français 🇫🇷</option>
+				<option value="en">English 🇬🇧</option>
+				<option value="zh">中文 🇨🇳</option>
+			</select>
+		</div>
+		<div class="card" id="welcome-card">
+			<h1 id="welcome_title"></h1>			
+			<div id="daily-quote-container">
+				<h2 id="quote_intro"></h2>
+				<p id="quote-text">--</p>
+			</div>
+			<button id="enter_chat"></button>
+		</div>
+	</div>
+	<div class="view" id="access-view"></div>
+	<div class="view" id="bridge-view"></div>
+	<div class="view" id="cgu-view"></div>
+    <script>			 
+		var lang = localStorage.getItem('preferred-lang') || (navigator.language.startsWith('fr') ? 'fr' : 'en');
+		applyLanguageComponent(`welcome`, lang);
+
+		document.getElementById('enter_chat').addEventListener('click', async () => {
+			try {
+			
+				await loadComponentFull(`access`)
+				document.getElementById('welcome-view').style.display = 'none';
+				document.getElementById('access-view').style.display = 'flex';
+				
+			} catch (err) {
+				console.error("Erreur de chargement des scripts :", err);
+			}
+		});		
+    </script>
+</body>
+</html>

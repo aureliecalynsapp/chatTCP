@@ -1,6 +1,7 @@
 var express = require('express');
+var path = require('path');
 var app = express();
-app.use(express.static(__dirname)); 
+app.use(express.static(path.join(__dirname, '../client')));
 var http = require('http');
 var server = http.createServer(app);
 var { Server } = require("socket.io");
@@ -10,7 +11,7 @@ var io = new Server(server, {
     maxHttpBufferSize: 1e7 // 10Mo pour les photos chiffrées
 });
 
-var DATA_FILE = './messages.json';
+var DATA_FILE = path.join(__dirname, 'data', 'messages.json');
 let messagesSave = [];
 var userTimezones = {};
 
@@ -24,9 +25,6 @@ try {
     console.error("Erreur lecture historique:", err);
     messagesSave = [];
 }
-
-app.get('/', (req, res) => { res.sendFile(__dirname + '/index.html'); });
-app.get('/cgu', (req, res) => { res.sendFile(__dirname + '/cgu.html'); });
 
 io.on('connection', (socket) => {
     console.log('Utilisateur connecté');

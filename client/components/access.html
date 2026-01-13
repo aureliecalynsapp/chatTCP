@@ -1,0 +1,31 @@
+<div class="header" style="display:none;">
+	<button id="welcome-return">↩️</button>
+	<div class="lang">
+		<select class="lang-selector" id="access-lang-selector" onchange="onLanguageChange(this.value)">
+			<option value="fr">Français 🇫🇷</option>
+			<option value="en">English 🇬🇧</option>
+			<option value="zh">中文 🇨🇳</option>
+		</select>
+	</div>
+</div>
+<div class="card" id="access-card">
+	<h1 id="access_main_title" style="display:none;></h1>
+	<div id="access-main">
+		<h2 id="access_sec1_title"></h2>
+		<form id="access-form" class="access-form">
+			<input type="text" id="input_pseudo" class="input" placeholder="..." rows="1"></input>
+			<input type="password" id="input_key" class="input" placeholder="..." rows="1"></input>
+			<button id="access_btn" type="submit"></button>
+		</form>
+		<p id="access_sec1_text"></p>
+	</div>
+	<div id="access-new" style="display:none;">
+		<h2 id="access_sec2_title"></h2>
+		<form id="access-new-form" class="access-form">
+			<input type="text" id="input_pseudo_new" class="input" placeholder="..." rows="1"></input>
+			<input type="password" id="input_key_new" class="input" placeholder="..." rows="1"></input>
+			<button id="access_btn_new" type="submit"></button>
+		</form>
+		<div class="important" id="access_sec2_text"></div>
+	</div>
+</div>

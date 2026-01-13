@@ -1,0 +1,120 @@
+
+/*
+height: 100vh; = Prend toute la hauteur
+overflow-y: auto; = Active le scroll vertical
+display: block; = S'assure qu'il se comporte comme un bloc 
+-webkit-overflow-scrolling: touch; = Indispensable pour la fluidité iOS 
+height: -webkit-fill-available; = Correctif pour la barre Safari sur iPhone 
+overflow: hidden; = Empêche le corps de la page de bouger 
+-webkit-overflow-scrolling: touch; = Scroll fluide "effet ressort" sur iPhone 
+word-wrap: break-word; = Évite que le texte ne dépasse sur les petits écrans 
+*/
+
+ :root {
+  --bg-color : #c1adc2;--text-color : #333333;--header-bg : #9e82a0;--message-bg : #f1f1f1;--border-color : #dddddd;--bg-color-me : #dcf8c6;--bg-color-them : #ffffff;--bg-color-button : #856088;--text-color-me : #2d232e
+}
+[data-theme="dark"] {
+  --bg-color : #423143;--text-color : #cccccc;--header-bg : #68506a;--message-bg : #2d2d2d;--border-color : #333333;--bg-color-me : #dcf8c6;--bg-color-them : #ffffff;--bg-color-button : #856088;--text-color-me : #2d232e
+}
+body {
+	align-items: center;
+	background-color : var(--bg-color);
+	color : var(--text-color);
+	display: flex;
+	font-family : 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+	height : 100dvh;
+	justify-content: center;
+	margin : 0;
+	overflow : hidden;
+	padding : 0;
+	transition : background-color 0.3s, color 0.3s;
+}
+button {
+	background : var(--bg-color-button);
+	border: none;
+	border-radius: 20px;
+	color: var(--text-color);
+	cursor: pointer;
+	font-weight : bold;
+	margin: 5px;
+	padding: 10px;
+}
+.input {
+  flex-grow : 1; border: none; padding: 10px 15px; border-radius: 20px; outline: none; resize : none; max-height : 150px; font-family: inherit; font-size: 16px; overflow-y : hidden; margin: 5px
+}
+.view {
+	box-shadow: 0 0 15px rgba(0,0,0,0.1);
+	flex-direction : column;
+	height : 100dvh;
+	height: -webkit-fill-available;
+	left: 0;
+	left: 50%;
+	margin: 0 auto;
+	max-width: 800px;
+	overflow: hidden;
+	position: absolute;
+	transform: translateX(-50%);
+	top: 0;
+}
+.header {
+	box-shadow : 0 2px 5px rgba(0, 0,0, 0.1);
+	background-color : var(--header-bg);
+	border-bottom : 1px solid var(--border-color);
+	border-radius : 4px;
+	flex-shrink: 0;
+	justify-content : space-between;
+	padding : 10px 15px;
+	top: 0;
+}
+.lang {
+    position: absolute; top: 20px; right: 20px;
+}
+.card {
+	background-color : var(--header-bg);
+	border-radius: 20px;
+	box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+	margin: 20px;
+	padding: 30px;
+	text-align: center;
+}
+.card section:last-child {
+    margin-bottom: 40px;
+}
+.time {
+	display: block;
+	font-size : 0.6em;
+	font-style : italic;
+	opacity: 0.6;
+	text-align: right;
+}
+@media screen and (max-width: 800px) { /* reduction d'élément pour les smartphones */
+	body.chat-open {
+        display: block !important;
+    }
+    #bridge-view.active {
+        display: flex !important; touch-action: pan-x pan-y !important; width: 100vw !important; max-width: 100% !important; height: 100dvh !important; border-radius: 0 !important; position: fixed !important; left: 0 !important; transform: none !important;
+	}
+	#chat-header {
+        padding: 5px !important; position: sticky; top: 0; flex-shrink: 0;
+    }
+	#chat-footer {
+        padding: 5px !important; position: sticky; bottom: 0; flex-shrink: 0;
+    }
+    #clocks-container {
+        padding: 3px !important;
+    }
+    .analog-clock {
+        width: 35px !important; height: 35px !important;
+    }
+    #them-city-name, #me-city-name {
+        font-size: 0.7em !important;
+    }
+	#input {
+        font-size: 16px !important; padding: 5px 10px !important;
+    }    
+    #form button {
+		padding: 5px !important; 
+    }
+	#emoji-btn {
+        display: none !important;
+}
