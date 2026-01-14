@@ -35,7 +35,14 @@ document.getElementById('access-view').addEventListener('submit', (e) => {
 				await loadComponentJs(`ui`);
 				await loadComponentJs(`socket-logic`);
 				await loadLibsJs(`crypto-js.min`);
-					
+				
+				let userId = localStorage.getItem('user-id');
+				if (!userId) {
+					// On génère un ID aléatoire si c'est la première fois
+					userId = 'u_' + Math.random().toString(36).substr(2, 9) + Date.now().toString(36);
+					localStorage.setItem('user-id', userId);
+				}
+				
 				myPseudo = typedPseudo;
 				SECRET_KEY = typedKey;
 			
@@ -53,7 +60,7 @@ document.getElementById('access-view').addEventListener('submit', (e) => {
 				document.getElementById('bridge-view').style.display = 'flex';
 					
 				var myTZ = Intl.DateTimeFormat().resolvedOptions().timeZone;
-				socket.emit('join', myPseudo, myTZ);					
+				socket.emit('join', { pseudo: myPseudo, tz: myTZ, userId: userId });					
 					
 				// On crée un contexte audio ou on joue un son bref pour "déverrouiller"
 				var audio = new Audio('/assets/sounds/pop.mp3');

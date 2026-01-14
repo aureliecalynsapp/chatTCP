@@ -2,12 +2,12 @@
 /*
 height: 100vh; = Prend toute la hauteur
 overflow-y: auto; = Active le scroll vertical
-display: block; = S'assure qu'il se comporte comme un bloc 
--webkit-overflow-scrolling: touch; = Indispensable pour la fluidité iOS 
-height: -webkit-fill-available; = Correctif pour la barre Safari sur iPhone 
-overflow: hidden; = Empêche le corps de la page de bouger 
--webkit-overflow-scrolling: touch; = Scroll fluide "effet ressort" sur iPhone 
-word-wrap: break-word; = Évite que le texte ne dépasse sur les petits écrans 
+display: block; = S'assure qu'il se comporte comme un bloc
+-webkit-overflow-scrolling: touch; = Indispensable pour la fluidité iOS
+height: -webkit-fill-available; = Correctif pour la barre Safari sur iPhone
+overflow: hidden; = Empêche le corps de la page de bouger
+-webkit-overflow-scrolling: touch; = Scroll fluide "effet ressort" sur iPhone
+word-wrap: break-word; = Évite que le texte ne dépasse sur les petits écrans
 */
 
  :root {
@@ -111,9 +111,9 @@ button {
     }
 	#input {
         font-size: 16px !important; padding: 5px 10px !important;
-    }    
+    }   
     #form button {
-		padding: 5px !important; 
+		padding: 5px !important;
     }
 	#emoji-btn {
         display: none !important;

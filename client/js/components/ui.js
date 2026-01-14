@@ -5,10 +5,23 @@ let notificationInterval = null;
 let myTZ = Intl.DateTimeFormat().resolvedOptions().timeZone;
 let themTZ = myTZ;
 
-function getNowFormatted() {
-	var now = new Date();
-	var options = { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' };
-	return now.toLocaleDateString('en-GB', options).replace(',', '');
+// function getNowFormatted() {
+	// var now = new Date();
+	// var options = { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' };
+	// return now.toLocaleDateString('en-GB', options).replace(',', '');
+// }
+
+function formatToLocalTime(utcString) {
+    const date = new Date(utcString);
+    
+    // Options pour un affichage propre (ex: 14:20)
+    return date.toLocaleTimeString(navigator.language, {
+		day: 'numeric', 
+		month: 'short', 
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false // Force le format 24h si tu préfères
+    });
 }
 
 function getHashColor(str) {
@@ -124,13 +137,14 @@ function sendMediaMessage(base64Data, type) {
     var encryptedAudio = CryptoJS.AES.encrypt(base64Data, SECRET_KEY).toString();
     
     var data = {
-        id: 'voice-' + Date.now(),
+        id: 'voice-' + Math.random().toString(36).substr(2, 9) + Date.now().toString(36),
         type: 'voice',
         text: "", 
         audio: encryptedAudio,
         isEncrypted: true,
-        time: getNowFormatted(),
-        pseudo: myPseudo
+        utcDate: new Date().toISOString(),
+        pseudo: myPseudo,
+		authorId: localStorage.getItem('user-id')
     };
 
     addMessage({ ...data, audio: base64Data }, 'me');
@@ -179,6 +193,31 @@ function sendSystemNotification(user) {
 			toggle = !toggle;
 		}, 1000); 
 	}
+}
+
+function deleteMessage(id) {	
+	const currentLang = localStorage.getItem('preferred-lang') || 'fr';
+	var t = bridgeTranslations[currentLang];    
+	if(confirm(t.confirm_delete)) {
+		socket.emit('delete message', id);
+	}
+}
+
+function editMessage(text,id) {
+	const input = document.getElementById('input_placeholder');
+	input.value = text;
+	input.dataset.editId = id;
+	input.focus();
+}
+
+function editMessage(id) {
+	const messageEl = document.getElementById(id);
+	const textContainer = messageEl.querySelector('.message-wrapper div:first-child');
+    if (!textContainer) return;
+	const input = document.getElementById('input_placeholder');
+	input.value = textContainer.textContent;
+	input.dataset.editId = id;
+	input.focus();
 }
 
 var debugDiv = document.getElementById('debug-check');

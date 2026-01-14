@@ -181,12 +181,13 @@ function setupDynamicListeners() {
 				var rawImageData = event.target.result;
 				var encryptedImage = CryptoJS.AES.encrypt(rawImageData, SECRET_KEY).toString();						
 				var imageData = {
-					id: 'img-' + Date.now(),
+					id: 'img-' + Math.random().toString(36).substr(2, 9) + Date.now().toString(36),
 					text: "", 
 					image: encryptedImage,
 					isEncrypted: true,
-					time: getNowFormatted(),
-					pseudo: myPseudo
+					utcDate: new Date().toISOString(),
+					pseudo: myPseudo,
+					authorId: localStorage.getItem('user-id')
 				};
 				addMessage({ ...imageData, image: rawImageData }, 'me');
 				socket.emit('chat message', imageData);
@@ -197,12 +198,13 @@ function setupDynamicListeners() {
 			compressImage(file, function(compressedBase64) {
 				var encryptedImage = CryptoJS.AES.encrypt(compressedBase64, SECRET_KEY).toString();
 				var imageData = {
-					id: 'img-' + Date.now(),
+					id: 'img-' + Math.random().toString(36).substr(2, 9) + Date.now().toString(36),
 					text: "", 
 					image: encryptedImage,
 					isEncrypted: true,
-					time: getNowFormatted(),
-					pseudo: myPseudo
+					utcDate: new Date().toISOString(),
+					pseudo: myPseudo,
+					authorId: localStorage.getItem('user-id')
 				};
 				addMessage({ ...imageData, image: compressedBase64 }, 'me');
 				socket.emit('chat message', imageData);
@@ -236,19 +238,26 @@ function setupMobileListeners() {
 // ENVOI DE TEXTE ---
 document.getElementById('bridge-view').addEventListener('submit', (e) => {
 	e.preventDefault();
-	if (input.value.trim()) {
-		var timeStr = getNowFormatted();				
-		var encryptedText = CryptoJS.AES.encrypt(input.value, SECRET_KEY).toString();
-		var data = { 
-			text: encryptedText, 
-			time: timeStr, 
-			pseudo: myPseudo, 
-			isEncrypted: true, 
-			id: 'msg-' + Date.now() 
-		};
-				
-		addMessage(data, 'me');
-		socket.emit('chat message', data);
+	const editId = input.getAttribute('data-edit-id')
+	if (input.value.trim()) {			
+		if (editId) {
+			var encryptedText = CryptoJS.AES.encrypt(input.value, SECRET_KEY).toString();
+			socket.emit('edit message', { id: editId, newText: encryptedText });
+			input.removeAttribute('data-edit-id');			
+		} else {
+			var encryptedText = CryptoJS.AES.encrypt(input.value, SECRET_KEY).toString();
+			var data = { 
+				text: encryptedText, 
+				utcDate: new Date().toISOString(), 
+				pseudo: myPseudo, 
+				isEncrypted: true, 
+				id: 'msg-' + Math.random().toString(36).substr(2, 9) + Date.now().toString(36),
+				authorId: localStorage.getItem('user-id')
+			};
+					
+			addMessage(data, 'me');
+			socket.emit('chat message', data);
+		}
 		input.value = '';
 		input.style.height = 'auto';
 		socket.emit('stop typing');
@@ -269,6 +278,23 @@ document.addEventListener('visibilitychange', () => {
 		clearInterval(notificationInterval);
 		notificationInterval = null;
 		document.title = originalTitle;
+		
+		if (pendingReadIds.length > 0) {
+			pendingReadIds.forEach(id => {
+				socket.emit('confirm read', id);
+				// Optionnel : ajouter une petite mention "(modifié)"
+				// const element = document.getElementById(id);
+				// if (!element.querySelector('.edited-label')) {
+					// const label = document.createElement('span');
+					// label.className = 'edited-label';
+					// label.innerText = ' (modifié)';
+					// label.style.fontSize = '0.7em';
+					// label.style.opacity = '0.5';
+					// element.querySelector('.message-footer').prepend(label);
+				// }
+			});
+			pendingReadIds = [];
+		}
 	}
 });
 
@@ -304,6 +330,7 @@ function addMessage(data, side, isPrepend = false) {
 	let displayText = "";
 	let displayImage = null;
 	let displayAudio = null;
+	let success = true;
 
 	// --- LOGIQUE DE DÉCHIFFREMENT ---
 	if (data.isEncrypted && SECRET_KEY) {
@@ -332,12 +359,20 @@ function addMessage(data, side, isPrepend = false) {
 						var audioBytes = CryptoJS.AES.decrypt(data.audio, SECRET_KEY);
 						rawBase64 = audioBytes.toString(CryptoJS.enc.Latin1);
 					}
-					var blob = dataURLtoBlob(rawBase64);
-					if (blob) {
-						displayAudio = URL.createObjectURL(blob);
+					if (!rawBase64 || !rawBase64.startsWith('data:audio')) {
+						displayText = t.key_ko;
+						displayAudio = null;
+					} else {
+						var blob = dataURLtoBlob(rawBase64);
+						if (blob) {
+							displayAudio = URL.createObjectURL(blob);
+						} else { 
+							displayText = t.key_ko;
+						}
 					}
 				} catch (e) {
 					console.error("Erreur technique audio:", e);
+					displayText = t.key_ko;
 				}
 			}
 		} catch (e) { 
@@ -348,6 +383,10 @@ function addMessage(data, side, isPrepend = false) {
 		displayText = data.text || "";
 		displayImage = data.image || null;
 		displayAudio = data.audio || null;
+	}
+	if (displayText === t.key_ko){
+		success = false;
+		// return success
 	}
 
 	// --- LOGIQUE D'AFFICHAGE ---
@@ -361,10 +400,14 @@ function addMessage(data, side, isPrepend = false) {
 			   onplay="console.log('Lecture en cours...')" 
 			   style="max-width: 100%; margin: 5px; height: 35px;">
 		</audio>` : "";
-	var tickContent = (data.read) ? '✓✓' : '✓';
+	var tickContent = (data.received) ? '✓✓' : '✓';
 	var tickColor = (data.read) ? 'color: #3498db;' : '';
 	var statusCheckHtml = (side === 'me') ? `<span class="status-check" id="tick-${data.id || Date.now()}" style="${tickColor}">${tickContent}</span>` : "";
+	var deleteBtnHtml = (side === 'me' && displayText !== t.key_ko) ? `<div class="deleted-btn" style="cursor:pointer; margin-right:8px;" onclick="deleteMessage('${data.id}')">🗑️</div>` : "";
+	var editBtnHtml = (side === 'me' && data.text && data.text.length > 0 && displayText !== t.key_ko) ? `<div class="edited-btn" style="cursor:pointer; margin-right:8px;" onclick="editMessage('${data.id}')">✏️</div>` : "";
+	var editedMsg = (data.edited) ? `<span class="edited-label" style="font-size:0.7em; opacity:0.5;"> (modifié) </span>` : "";
 
+	item.id = data.id;
 	item.innerHTML = `
 		<div style="${nameStyle}">${data.pseudo || 'Anonyme'}</div>
 		<div class="message-wrapper">
@@ -373,8 +416,11 @@ function addMessage(data, side, isPrepend = false) {
 			${audioHtml}
 		</div>
 		<div class="message-footer" style="display: flex; align-items: center; justify-content: flex-end; margin-top:3px">
-			<span class="time">${data.time || ''}</span>
+			${editedMsg}
+			<span class="time">${formatToLocalTime(data.utcDate) || ''}</span>
 			${statusCheckHtml}
+			${deleteBtnHtml}
+			${editBtnHtml}
 		</div>
 	`;
 
@@ -386,4 +432,6 @@ function addMessage(data, side, isPrepend = false) {
 		messagesList.appendChild(item);
 		messagesList.scrollTop = messagesList.scrollHeight;
 	}
+	
+	return success;
 }    
