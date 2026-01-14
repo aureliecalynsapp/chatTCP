@@ -12,6 +12,11 @@ var io = new Server(server, {
 });
 
 var DATA_FILE = path.join(__dirname, 'data', 'messages.json');
+// SÉCURITÉ : Créer le dossier 'data' s'il n'existe pas au démarrage
+const dataDir = path.join(__dirname, 'data');
+if (!fs.existsSync(dataDir)){
+    fs.mkdirSync(dataDir);
+}
 let messagesSave = [];
 var userTimezones = {};
 
