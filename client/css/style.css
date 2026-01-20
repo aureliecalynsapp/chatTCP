@@ -17,13 +17,13 @@ word-wrap: break-word; = Évite que le texte ne dépasse sur les petits écrans
   --bg-color : #423143;--text-color : #cccccc;--header-bg : #68506a;--message-bg : #2d2d2d;--border-color : #333333;--bg-color-me : #dcf8c6;--bg-color-them : #ffffff;--bg-color-button : #856088;--text-color-me : #2d232e
 }
 body {
-	align-items: center;
+	/* align-items: center; */
 	background-color : var(--bg-color);
 	color : var(--text-color);
-	display: flex;
+	/* display: flex; */
 	font-family : 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 	height : 100dvh;
-	justify-content: center;
+	/* justify-content: center; */
 	margin : 0;
 	overflow : hidden;
 	padding : 0;
