@@ -17,13 +17,13 @@ word-wrap: break-word; = Évite que le texte ne dépasse sur les petits écrans
   --bg-color : #423143;--text-color : #cccccc;--header-bg : #68506a;--message-bg : #2d2d2d;--border-color : #333333;--bg-color-me : #dcf8c6;--bg-color-them : #ffffff;--bg-color-button : #856088;--text-color-me : #2d232e
 }
 body {
-	/* align-items: center; */
+	align-items: center;
 	background-color : var(--bg-color);
 	color : var(--text-color);
-	/* display: flex; */
+	display: flex;
 	font-family : 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 	height : 100dvh;
-	/* justify-content: center; */
+	justify-content: center;
 	margin : 0;
 	overflow : hidden;
 	padding : 0;
@@ -53,7 +53,7 @@ button {
 	margin: 0 auto;
 	max-width: 800px;
 	overflow: hidden;
-	position: fixed;
+	position: absolute;
 	transform: translateX(-50%);
 	top: 0;
 }
@@ -118,16 +118,4 @@ button {
     }
 	#emoji-btn {
         display: none !important;
-}
-
-/* Cette ligne va nous dire quelle div "mange" l'espace */
-#messages {
-    border: 4px solid #ff0000 !important; /* Rouge flash */
-    background-color: rgba(255, 0, 0, 0.1) !important;
-    min-height: 200px !important;
-}
-
-/* Cette ligne va nous dire si le footer bloque tout */
-footer, .input-area {
-    border: 4px solid #00ff00 !important; /* Vert flash */
 }
