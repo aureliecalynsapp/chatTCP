@@ -1,7 +1,16 @@
+const path = require('path');
 const sqlite3 = require('sqlite3').verbose();
 const { promisify } = require('util');
 
-const db = new sqlite3.Database('./data/chat.db');
+const dbPath = path.join(__dirname, 'data', 'chat.db'); 
+
+const db = new sqlite3.Database(dbPath, (err) => {
+    if (err) {
+        console.error("ERREUR d'ouverture de la base :", err.message);
+    } else {
+        console.log("Connecté à la base SQLite à :", dbPath);
+    }
+});
 
 const dbRun = promisify(db.run.bind(db));
 const dbAll = promisify(db.all.bind(db));
