@@ -49,8 +49,16 @@ function setupDynamicListeners() {
                 break;
 				
 			case 'load_more_btn':
-				var currentCount = document.querySelectorAll('.message').length;
-				socket.emit('load more', currentCount);
+				const firstMessage = document.querySelector('li.message'); 
+				if (firstMessage) {
+					const lastId = firstMessage.getAttribute('id');
+					console.log("Chargement des messages avant l'ID :", lastId);
+					
+					// 3. On envoie la demande au serveur
+					socket.emit('load more', { canalId: '1', lastId: lastId });
+				} else {
+					console.log("Aucun message trouvé pour servir de référence.");
+				}
 				break;
 
             case 'emoji-btn':
@@ -182,14 +190,15 @@ function setupDynamicListeners() {
 				var encryptedImage = CryptoJS.AES.encrypt(rawImageData, SECRET_KEY).toString();						
 				var imageData = {
 					id: 'img-' + Math.random().toString(36).substr(2, 9) + Date.now().toString(36),
-					text: "", 
-					image: encryptedImage,
-					isEncrypted: true,
+					// text: "", 
+					type: 'image',
+					content: encryptedImage,
+					// isEncrypted: true,
 					utcDate: new Date().toISOString(),
 					pseudo: myPseudo,
 					authorId: localStorage.getItem('user-id')
 				};
-				addMessage({ ...imageData, image: rawImageData }, 'me');
+				addMessage({ ...imageData, content: rawImageData, received: false, read:false }, 'me');
 				socket.emit('chat message', imageData);
 			};
 			reader.readAsDataURL(file);
@@ -199,23 +208,20 @@ function setupDynamicListeners() {
 				var encryptedImage = CryptoJS.AES.encrypt(compressedBase64, SECRET_KEY).toString();
 				var imageData = {
 					id: 'img-' + Math.random().toString(36).substr(2, 9) + Date.now().toString(36),
-					text: "", 
-					image: encryptedImage,
-					isEncrypted: true,
+					// text: "", 
+					type: 'image',
+					content: encryptedImage,
+					// isEncrypted: true,
 					utcDate: new Date().toISOString(),
 					pseudo: myPseudo,
 					authorId: localStorage.getItem('user-id')
 				};
-				addMessage({ ...imageData, image: compressedBase64 }, 'me');
+				addMessage({ ...imageData, content: compressedBase64, received: false, read:false }, 'me');
 				socket.emit('chat message', imageData);
 			});
 		}
 		e.target.value = '';
 	});
-}
-
-function stopTimer() {
-	clearInterval(timerInterval);
 }
 
 function setupMobileListeners() {		
@@ -242,20 +248,21 @@ document.getElementById('bridge-view').addEventListener('submit', (e) => {
 	if (input.value.trim()) {			
 		if (editId) {
 			var encryptedText = CryptoJS.AES.encrypt(input.value, SECRET_KEY).toString();
-			socket.emit('edit message', { id: editId, newText: encryptedText });
+			socket.emit('edit message', { id: editId, newText: encryptedText, pseudo: myPseudo, authorId: localStorage.getItem('user-id') });
 			input.removeAttribute('data-edit-id');			
 		} else {
 			var encryptedText = CryptoJS.AES.encrypt(input.value, SECRET_KEY).toString();
 			var data = { 
-				text: encryptedText, 
+				content: encryptedText, 
+				type: 'text',
 				utcDate: new Date().toISOString(), 
 				pseudo: myPseudo, 
-				isEncrypted: true, 
+				// isEncrypted: true, 
 				id: 'msg-' + Math.random().toString(36).substr(2, 9) + Date.now().toString(36),
 				authorId: localStorage.getItem('user-id')
 			};
 					
-			addMessage(data, 'me');
+			addMessage({ ...data, received: false, read:false}, 'me');
 			socket.emit('chat message', data);
 		}
 		input.value = '';
@@ -274,6 +281,8 @@ if (window.visualViewport) {
 }
 		
 document.addEventListener('visibilitychange', () => {
+	
+	const currentUserId = localStorage.getItem('user-id');
 	if (!document.hidden) {
 		clearInterval(notificationInterval);
 		notificationInterval = null;
@@ -281,17 +290,7 @@ document.addEventListener('visibilitychange', () => {
 		
 		if (pendingReadIds.length > 0) {
 			pendingReadIds.forEach(id => {
-				socket.emit('confirm read', id);
-				// Optionnel : ajouter une petite mention "(modifié)"
-				// const element = document.getElementById(id);
-				// if (!element.querySelector('.edited-label')) {
-					// const label = document.createElement('span');
-					// label.className = 'edited-label';
-					// label.innerText = ' (modifié)';
-					// label.style.fontSize = '0.7em';
-					// label.style.opacity = '0.5';
-					// element.querySelector('.message-footer').prepend(label);
-				// }
+				socket.emit('confirm read', id, currentUserId, myPseudo);
 			});
 			pendingReadIds = [];
 		}
@@ -324,7 +323,6 @@ window.onerror = function(message, source, lineno, colno, error) {
 function addMessage(data, side, isPrepend = false) {
 	var item = document.createElement('li');
 	item.classList.add('message', side);
-	const currentLang = localStorage.getItem('preferred-lang') || 'fr';
 	var t = bridgeTranslations[currentLang];    
 			
 	let displayText = "";
@@ -333,30 +331,30 @@ function addMessage(data, side, isPrepend = false) {
 	let success = true;
 
 	// --- LOGIQUE DE DÉCHIFFREMENT ---
-	if (data.isEncrypted && SECRET_KEY) {
+	if (data.type && SECRET_KEY) {
 		try {
-			if (data.text && data.text.length > 0) {
-				var textBytes = CryptoJS.AES.decrypt(data.text, SECRET_KEY);
+			if (data.type === 'text' && data.content && data.content.length > 0) {
+				var textBytes = CryptoJS.AES.decrypt(data.content, SECRET_KEY);
 				var decryptedText = textBytes.toString(CryptoJS.enc.Utf8);
 				displayText = decryptedText || t.key_ko;
 			}
-			if (data.image) {
-				if (data.image.startsWith('data:image')) {
-					displayImage = data.image;
+			if (data.type === 'image' && data.content) {
+				if (data.content.startsWith('data:image')) {
+					displayImage = data.content;
 				} else {
-					var imgBytes = CryptoJS.AES.decrypt(data.image, SECRET_KEY);
+					var imgBytes = CryptoJS.AES.decrypt(data.content, SECRET_KEY);
 					var decryptedImg = imgBytes.toString(CryptoJS.enc.Utf8);
 					displayImage = decryptedImg || null;
 					if (!displayImage) displayText = t.key_ko;
 				}
 			}
-			if (data.type === 'voice' && data.audio) {
+			if (data.type === 'voice' && data.content) {
 				try {
 					let rawBase64 = "";
-					if (data.audio.startsWith('data:audio')) {
-						rawBase64 = data.audio;
+					if (data.content.startsWith('data:audio')) {
+						rawBase64 = data.content;
 					} else {
-						var audioBytes = CryptoJS.AES.decrypt(data.audio, SECRET_KEY);
+						var audioBytes = CryptoJS.AES.decrypt(data.content, SECRET_KEY);
 						rawBase64 = audioBytes.toString(CryptoJS.enc.Latin1);
 					}
 					if (!rawBase64 || !rawBase64.startsWith('data:audio')) {
@@ -380,9 +378,9 @@ function addMessage(data, side, isPrepend = false) {
 			displayText = t.key_ko; 
 		}
 	} else {
-		displayText = data.text || "";
-		displayImage = data.image || null;
-		displayAudio = data.audio || null;
+		displayText = data.content || "";
+		displayImage = data.content || null;
+		displayAudio = data.content || null;
 	}
 	if (displayText === t.key_ko){
 		success = false;
@@ -403,9 +401,9 @@ function addMessage(data, side, isPrepend = false) {
 	var tickContent = (data.received) ? '✓✓' : '✓';
 	var tickColor = (data.read) ? 'color: #3498db;' : '';
 	var statusCheckHtml = (side === 'me') ? `<span class="status-check" id="tick-${data.id || Date.now()}" style="${tickColor}">${tickContent}</span>` : "";
-	var deleteBtnHtml = (side === 'me' && displayText !== t.key_ko) ? `<div class="deleted-btn" style="cursor:pointer; margin-right:8px;" onclick="deleteMessage('${data.id}')">🗑️</div>` : "";
-	var editBtnHtml = (side === 'me' && data.text && data.text.length > 0 && displayText !== t.key_ko) ? `<div class="edited-btn" style="cursor:pointer; margin-right:8px;" onclick="editMessage('${data.id}')">✏️</div>` : "";
-	var editedMsg = (data.edited) ? `<span class="edited-label" style="font-size:0.7em; opacity:0.5;"> (modifié) </span>` : "";
+	var deleteBtnHtml = (side === 'me' && displayText !== t.key_ko) ? `<div class="deleted-btn" style="cursor:pointer; margin-right:8px;" onclick="deleteMessage('${data.id}','${data.authorId}')">🗑️</div>` : "";
+	var editBtnHtml = (side === 'me' && data.type === 'text' && data.content.length > 0 && displayText !== t.key_ko) ? `<div class="edited-btn" style="cursor:pointer; margin-right:8px;" onclick="editMessage('${data.id}')">✏️</div>` : "";
+	var editedMsg = (data.modifiedDate) ? `<span class="edited-label" style="font-size:0.7em; opacity:0.5;">(modifié) </span>` : "";// à refaire
 
 	item.id = data.id;
 	item.innerHTML = `
@@ -423,6 +421,32 @@ function addMessage(data, side, isPrepend = false) {
 			${editBtnHtml}
 		</div>
 	`;
+	
+	if (data.emojis && data.emojis.length > 0) {
+		let reactionContainer = document.createElement('div');
+		reactionContainer.className = 'reactions-container';
+		
+		data.emojis.forEach(emoji => {
+			reactionContainer.innerHTML += `<span class="reaction-badge">${emoji}</span>`;
+		});
+		
+		item.appendChild(reactionContainer);
+	}
+	
+	if (side === 'them') {
+		// Pour la souris (PC)
+		item.onmousedown = () => {
+			startPress(data.id, item);
+		};
+		item.onmouseup = cancelPress;
+		item.onmouseleave = cancelPress;
+
+		// Pour le tactile (Mobile)
+		item.ontouchstart = () => {
+			startPress(data.id, item);
+		};
+		item.ontouchend = cancelPress;
+	}	
 
 	// --- LOGIQUE D'INSERTION ---
 	var messagesList = document.getElementById('messages');
@@ -435,3 +459,10 @@ function addMessage(data, side, isPrepend = false) {
 	
 	return success;
 }    
+
+document.addEventListener('mousedown', (event) => {
+    const picker = document.getElementById('emoji-reaction');
+    if (picker && !picker.contains(event.target)) {
+        picker.style.display = 'none';
+    }
+});

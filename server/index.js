@@ -11,207 +11,180 @@ var io = new Server(server, {
     maxHttpBufferSize: 1e7 // 10Mo pour les photos chiffrées
 });
 
-var DATA_FILE = path.join(__dirname, 'data', 'messages.json');
-// SÉCURITÉ : Créer le dossier 'data' s'il n'existe pas au démarrage
 const dataDir = path.join(__dirname, 'data');
 if (!fs.existsSync(dataDir)){
     fs.mkdirSync(dataDir);
 }
 let messagesSave = [];
 var userTimezones = {};
+const activeUsers = {}; 
+const userId = "";
+const database = require('./database');
 
-// Chargement initial (On charge TOUT l'historique)
-try {
-	if (fs.existsSync(DATA_FILE)) {
-		var fileContent = fs.readFileSync(DATA_FILE, 'utf-8');
-		messagesSave = fileContent ? JSON.parse(fileContent) : [];
-	}
-} catch (err) {
-	console.error("Erreur lecture historique:", err);
-	messagesSave = [];
-}
-
-io.on('connection', (socket) => {
-	console.log(`Utilisateur sur l'appli`);
+async function startApp() {
 	
-	// authentification
-	socket.on('check-auth', (submittedPassword) => {
-		var correctPassword = process.env.CHAT_PASSWORD;
-				
-		if (submittedPassword === correctPassword) {
-			socket.emit('auth-result', { success: true });
-		} else {
-			socket.emit('auth-result', { success: false });
-		}
-	});		
+// Au démarrage du serveur
+	await database.initdatabase();
+	console.log("✅ Base de données prête");
 	
-	// Écoute les erreurs envoyées par les clients
-	socket.on('client error', (data) => {
-		console.log(`❌ ERREUR CLIENT [${data.pseudo}]: ${data.message} à la ligne ${data.line} dans ${data.source}`);
+	const PORT = process.env.PORT || 3000;
+	server.listen(PORT, () => {
+		console.log(`Serveur prêt sur le port ${PORT}`);
 	});
-
-	// 1. Gestion de l'arrivée
-	const activeUsers = {}; 
-
-	socket.on('join', (data) => {
-		const pseudo = (typeof data === 'object') ? data.pseudo : data;
-		const timezone = (typeof data === 'object') ? data.tz : arguments[1];
-		const userId = (typeof data === 'object') ? data.userId : null;
-
-		socket.pseudo = pseudo;
-		socket.userId = userId;
-
-		if (userId) {
-			activeUsers[userId] = {
-				pseudo: pseudo,
-				timezone: timezone,
-				lastSeen: Date.now()
-			};
-		}
-
-		userTimezones[userId] = timezone;
-		io.emit('update users timezones', userTimezones);
+	
+	io.on('connection', (socket) => {
+		console.log(`Utilisateur sur l'appli`);
 		
-		// --- Historique ---
-		var last20 = messagesSave.slice(-20);
-		socket.emit('load history', last20);
-		
-		console.log(`👤 ${pseudo} (ID: ${userId}) a rejoint le chat.`);
-	});
-
-	// --- NOUVEAU : Gestion du bouton "Charger plus" ---
-	socket.on('load more', (currentCount) => {
-		var total = messagesSave.length;
-		var end = total - currentCount;
-		var start = Math.max(0, end - 20);
-
-		if (end > 0) {
-			var olderBatch = messagesSave.slice(start, end);
-			socket.emit('older messages', olderBatch);
-		} else {
-			socket.emit('older messages', []);
-		}
-	});
-
-	// 2. Gestion des messages
-	socket.on('chat message', (data) => {
-		data.received = false;
-		data.read = false;
-		messagesSave.push(data);
-
-		// Nettoyage des images (Garde les 10 dernières)
-		let imageMessages = messagesSave.filter(m => m.image);
-		if (imageMessages.length > 10) {
-			let toClean = imageMessages.length - 10;
-			let cleanedCount = 0;
-			for (let i = 0; i < messagesSave.length; i++) {
-				if (messagesSave[i].image && cleanedCount < toClean) {
-					messagesSave[i].image = null;
-					cleanedCount++;
-				}
+		// authentification
+		socket.on('check-auth', (submittedPassword) => {
+			var correctPassword = process.env.CHAT_PASSWORD;					
+			if (submittedPassword === correctPassword) {
+				socket.emit('auth-result', { success: true });				
+				userId = socket.handshake.query.userId;				
+			} else {
+				socket.emit('auth-result', { success: false });
 			}
-		}
-
-		fs.writeFile(DATA_FILE, JSON.stringify(messagesSave, null, 2), 'utf-8', (err) => {
-			if (err) console.error("Erreur sauvegarde:", err);
+		});		
+		
+		// Écoute les erreurs envoyées par les clients
+		socket.on('client error', (data) => {
+			console.log(`❌ ERREUR CLIENT [${data.pseudo}]: ${data.message} à la ligne ${data.line} dans ${data.source}`);
 		});
 
-		socket.broadcast.emit('chat message', data);
-		// socket.emit('message received', data.id);
-	});
-	
-	socket.on('confirm received', (id) => {
-		let msg = messagesSave.find(m => m.id === id);
-		if (msg && !msg.received) {
-			msg.received = true;
-			fs.writeFile(DATA_FILE, JSON.stringify(messagesSave, null, 2), 'utf-8', (err) => {
-				if (err) return console.error("Erreur save received status:", err);				
-			});
-			io.emit('status update', { id: id, status: 'received' });
-		}
-	});
-	
-	socket.on('confirm read', (id) => {
-		let msg = messagesSave.find(m => m.id === id);
-		if (msg && !msg.read) {
-			msg.received = true;
-			msg.read = true;
-			// SAUVEGARDE PHYSIQUE DANS LE JSON
-			fs.writeFile(DATA_FILE, JSON.stringify(messagesSave, null, 2), 'utf-8', (err) => {
-				if (err) return console.error("Erreur save read status:", err);
-			});
-			io.emit('status update', { id: id, status: 'read' });
-		}
-	});
+		// Gestion de l'arrivée
+		socket.on('join', async (data) => {
+			const pseudo = (typeof data === 'object') ? data.pseudo : data;
+			const timezone = (typeof data === 'object') ? data.tz : arguments[1];
+			const userId = (typeof data === 'object') ? data.userId : null;
 
-    // 3. Gestion du "LU"
-    // socket.on('message read', (msgId) => {
-        // let msg = messagesSave.find(m => m.id === msgId);
-        // if (msg) msg.read = true;
+			socket.pseudo = pseudo;
+			socket.userId = userId;
 
-        // socket.broadcast.emit('user read message', msgId);
-        // fs.writeFile(DATA_FILE, JSON.stringify(messagesSave), (err) => {
-            // if (err) console.error("Erreur sauvegarde read-status:", err);
-        // });
-    // });
+			if (userId) {
+				activeUsers[userId] = {
+					pseudo: pseudo,
+					timezone: timezone,
+					lastSeen: Date.now()
+				};
+			}
 
-	// 4. Typing indicators
-	socket.on('typing', (pseudo) => { socket.broadcast.emit('user typing', pseudo); });
-	socket.on('stop typing', () => { socket.broadcast.emit('user stop typing'); });
-
-	// 5. Déconnexion
-	socket.on('disconnect', () => {
-		if (socket.pseudo) {
-			console.log(`📡 ${socket.pseudo} (ID: ${socket.userId}) s'est déconnecté.`);
-			delete userTimezones[socket.userId];
+			userTimezones[userId] = timezone;
 			io.emit('update users timezones', userTimezones);
-		}
-	});
+			
+			// --- Historique ---
+			messagesSave = await database.getMessagesByCanal('1');
+			console.log(`✅ ${messagesSave.length} messages chargés`);
+			socket.emit('load history', messagesSave);
+			
+			console.log(`👤 ${pseudo} (ID: ${userId}) a rejoint le chat.`);
+		});
 
-	socket.on('delete message', (messageId) => {
-		// 1. On le retire de la mémoire (messages.json)
-		const index = messagesSave.findIndex(m => m.id === messageId);
+		// Gestion du bouton "Charger plus"
+		socket.on('load more', async (data) => {
+			const limit = 20;
+			const messagesMore = await database.getMessagesByCanal(data.canalId, limit + 1, data.lastId);
+			const hasMore = messagesMore.length > limit;
+			if (hasMore) {
+				messagesMore.shift();
+			}
+			socket.emit('older messages', { 
+				messagesMore: messagesMore, 
+				hasMore: hasMore 
+			});
+		});
+
+		// Gestion des messages
+		socket.on('chat message', async(data) => {
+
+			// Nettoyage des images (Garde les 10 dernières)
+			// let imageMessages = messagesSave.filter(m => m.image);
+			// if (imageMessages.length > 10) {
+				// let toClean = imageMessages.length - 10;
+				// let cleanedCount = 0;
+				// for (let i = 0; i < messagesSave.length; i++) {
+					// if (messagesSave[i].image && cleanedCount < toClean) {
+						// messagesSave[i].image = null;
+						// cleanedCount++;
+					// }
+				// }
+			// }
+
+			try {
+				const saved = await database.saveMessage(data);		
+				socket.broadcast.emit('chat message', data);
+			} catch (err) {
+				console.error("Erreur BDD:", err);
+			}
+		});
 		
-		if (index !== -1) {
-			// Optionnel : Vérifier que le socket.userId est bien l'authorId du message (SÉCURITÉ)
-			if (messagesSave[index].authorId === socket.userId) {
-				messagesSave.splice(index, 1);
-				
+		socket.on('confirm received', async (id, userId, pseudo) => {
+			const received = await database.getReactionReceivedByMessage(id);
+			if (!received) {
+				await database.insertMessageStatus(id, 'received', userId, pseudo);
+				io.emit('status update', { id: id, status: 'received' });
+			}
+		});
+		
+		socket.on('confirm read', async (id, userId, pseudo) => {
+			const read = await database.getReactionReadByMessage(id);
+			if (!read) {
+				await database.insertMessageStatus(id, 'received', userId, pseudo);
+				await database.insertMessageStatus(id, 'read', userId, pseudo);
+				io.emit('status update', { id: id, status: 'read' });
+			}
+		});
+
+		// Typing indicators
+		socket.on('typing', (pseudo) => { socket.broadcast.emit('user typing', pseudo); });
+		socket.on('stop typing', () => { socket.broadcast.emit('user stop typing'); });
+
+		// Déconnexion
+		socket.on('disconnect', () => {
+			if (socket.pseudo) {
+				console.log(`📡 ${socket.pseudo} (ID: ${socket.userId}) s'est déconnecté.`);
+				delete userTimezones[socket.userId];
+				io.emit('update users timezones', userTimezones);
+			}
+		});
+
+		// Réaction
+		socket.on('delete message', async (msg) => {
+			if (msg.authorId === socket.userId) {
 				try {
-					fs.writeFileSync(DATA_FILE, JSON.stringify(messagesSave, null, 2), 'utf-8');
-					console.log(" Message supprimé dans messages.json");
-					
-					// 5. On prévient les clients SEULEMENT si le fichier est OK
-					io.emit('message deleted', messageId);
+					await database.insertMessageStatus(msg.id, 'deleted', msg.authorId, msg.pseudo);
+					console.log(" Message supprimé");
+					io.emit('message deleted', msg.id);
 				} catch (err) {
 					console.error("ERREUR d'écriture :", err);
 				}
 			} else {
-				console.log("Tentative de suppression non autorisée par :", socket.pseudo);
+				console.log("Tentative de suppression non autorisée par :", socket.pseudo, msg.authorId, socket.userId);
 			}
-		}
-	});
-		
-	socket.on('edit message', ({ id, newText }) => {
-		const msg = messagesSave.find(m => m.id === id);
-		if (msg && msg.authorId === socket.userId) {
-			msg.text = newText;
-			msg.edited = true; // On ajoute un flag
-			msg.read = false;      // Le message redeviendra gris (non lu)
-			msg.received = false;  // On attend que l'autre le reçoive à nouveau
-			msg.utcDate = new Date().toISOString(); // Optionnel: on met à jour l'heure
-
-			fs.writeFile(DATA_FILE, JSON.stringify(messagesSave, null, 2), 'utf-8', (err) => {
-				if (!err) {
-					console.log(" Message mis à jour dans messages.json");
-					io.emit('message edited', { id: id, text: newText, pseudo: msg.pseudo, authorId: msg.authorId });
+		});
+			
+		socket.on('edit message', async (msg) => {
+			if (msg.authorId === socket.userId) {				
+				try {
+					await database.updateMessage(msg.id, msg.newText);
+					console.log(" Message modifié");
+					io.emit('message edited', { id: msg.id, text: msg.newText, pseudo: msg.pseudo, authorId: msg.authorId });
+				} catch (err) {
+					console.error("ERREUR d'écriture :", err);
 				}
+			} else {
+				console.log("Tentative de modification non autorisée par :", socket.pseudo, msg.authorId, socket.userId);
+			}
+		});
+		
+		socket.on('message reaction', async (msg) => {
+			await database.insertEmoji(msg.id, msg.emoji, msg.userId, msg.pseudo);
+			io.emit('reaction added', { 
+				id: msg.id, 
+				emoji: msg.emoji, 
+				userId: socket.userId 
 			});
-		}
+		});
 	});
-});
+}
 
-var PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-    console.log(`Serveur prêt sur le port ${PORT}`);
-});
+startApp();

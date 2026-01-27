@@ -5,22 +5,19 @@ let notificationInterval = null;
 let myTZ = Intl.DateTimeFormat().resolvedOptions().timeZone;
 let themTZ = myTZ;
 
-// function getNowFormatted() {
-	// var now = new Date();
-	// var options = { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' };
-	// return now.toLocaleDateString('en-GB', options).replace(',', '');
-// }
-
 function formatToLocalTime(utcString) {
-    const date = new Date(utcString);
+	let standardizedDate = utcString;
+    if (typeof utcString === 'string' && !utcString.includes('Z') && !utcString.includes('+')) {
+        standardizedDate = utcString.replace(' ', 'T') + 'Z';
+    }
+    const date = new Date(standardizedDate);
     
-    // Options pour un affichage propre (ex: 14:20)
     return date.toLocaleTimeString(navigator.language, {
 		day: 'numeric', 
 		month: 'short', 
         hour: '2-digit',
         minute: '2-digit',
-        hour12: false // Force le format 24h si tu préfères
+        hour12: false
     });
 }
 
@@ -139,15 +136,15 @@ function sendMediaMessage(base64Data, type) {
     var data = {
         id: 'voice-' + Math.random().toString(36).substr(2, 9) + Date.now().toString(36),
         type: 'voice',
-        text: "", 
-        audio: encryptedAudio,
-        isEncrypted: true,
+        // text: "", 
+        content: encryptedAudio,
+        // isEncrypted: true,
         utcDate: new Date().toISOString(),
         pseudo: myPseudo,
 		authorId: localStorage.getItem('user-id')
     };
 
-    addMessage({ ...data, audio: base64Data }, 'me');
+    addMessage({ ...data, content: base64Data, received: false, read:false }, 'me');
     
     socket.emit('chat message', data);
 }
@@ -174,6 +171,10 @@ function startTimer() {
     }, 1000);
 }
 
+function stopTimer() {
+	clearInterval(timerInterval);
+}
+
 function requestNotificationPermission() {
     if ("Notification" in window && Notification.permission === "default") {
         Notification.requestPermission();
@@ -195,19 +196,14 @@ function sendSystemNotification(user) {
 	}
 }
 
-function deleteMessage(id) {	
-	const currentLang = localStorage.getItem('preferred-lang') || 'fr';
+function deleteMessage(id, authorId) {	
 	var t = bridgeTranslations[currentLang];    
 	if(confirm(t.confirm_delete)) {
-		socket.emit('delete message', id);
+		socket.emit('delete message', { 
+				id: id, 
+				authorId: authorId 
+			});
 	}
-}
-
-function editMessage(text,id) {
-	const input = document.getElementById('input_placeholder');
-	input.value = text;
-	input.dataset.editId = id;
-	input.focus();
 }
 
 function editMessage(id) {
@@ -222,3 +218,43 @@ function editMessage(id) {
 
 var debugDiv = document.getElementById('debug-check');
 if (debugDiv) debugDiv.style.display = 'none';
+let pressTimer;
+
+function startPress(msgId, element) {
+	clearTimeout(pressTimer);
+
+    // On récupère la position du message
+    const rect = element.getBoundingClientRect();
+    
+    // Coin en haut à droite :
+    // X = position gauche + largeur du message
+    // Y = position haute
+    const x = rect.left + rect.width;
+    const y = rect.top + (rect.height / 2);
+
+    pressTimer = window.setTimeout(() => {
+        showEmojiPicker(msgId, x, y);
+    }, 600);
+}
+
+function cancelPress() {
+	console.log("Timer annulé !");
+    clearTimeout(pressTimer);
+}
+
+let activeMsgId = null;
+
+function showEmojiPicker(msgId, x, y) {
+    activeMsgId = msgId;
+    const picker = document.getElementById('emoji-reaction');
+    
+    picker.style.display = 'block';
+    picker.style.left = x + 'px';
+    picker.style.top = (y - 50) + 'px'; // -50 pour l'afficher juste au-dessus du doigt
+}
+
+function sendReaction(emoji) {
+	const currentUserId = localStorage.getItem('user-id');
+    socket.emit('message reaction', { id: activeMsgId, emoji: emoji, userId: currentUserId, pseudo: myPseudo });
+    document.getElementById('emoji-reaction').style.display = 'none';
+}

@@ -31,7 +31,14 @@
 <div id="bridge-wrapper">
 	<button id="load_more_btn" style="background:none; border:none; cursor:pointer;"></button>
 </div>
-<ul id="messages"></ul>
+<ul id="messages">
+	<div id="emoji-reaction" style="display:none; position:fixed; z-index:1000; background:white; padding:5px; border-radius:20px; box-shadow:0 4px 15px rgba(0,0,0,0.2);">
+		<span onclick="sendReaction('👍')">👍</span>
+		<span onclick="sendReaction('❤️')">❤️</span>
+		<span onclick="sendReaction('😂')">😂</span>
+		<span onclick="sendReaction('😮')">😮</span>
+	</div>
+</ul>
 <div id="typing-indicator"></div>
 <footer id ="bridge-footer">
 	<form id="bridge-form">

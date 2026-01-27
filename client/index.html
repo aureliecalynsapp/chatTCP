@@ -31,16 +31,28 @@
 		</div>
 		<div >
 			<span style="background: rgba(0,0,0,0.05); padding: 2px 8px; border-radius: 10px; color: #bbb; font-size: 9px; letter-spacing: 1px">
-				RELEASE 1.8.7
+				RELEASE 1.9.0
 			</span>
 		</div>
 	</div>
 	<div class="view" id="access-view"></div>
 	<div class="view" id="bridge-view"></div>
 	<div class="view" id="cgu-view"></div>
-    <script>			 
-		var lang = localStorage.getItem('preferred-lang') || (navigator.language.startsWith('fr') ? 'fr' : 'en');
-		applyLanguageComponent(`welcome`, lang);
+    <script>
+		window.onload = function() {
+			try {
+				var currentLang = localStorage.getItem('preferred-lang') || (navigator.language.startsWith('fr') ? 'fr' : 'en');
+				if (typeof applyLanguageComponent === "function") {
+					applyLanguageComponent('welcome', currentLang);
+				} else {
+					console.error("La fonction applyLanguageComponent n'est pas encore chargée");
+				}
+			} catch (e) {
+				alert("Erreur JS : " + e.message);
+			}
+		};
+		<!-- var lang = localStorage.getItem('preferred-lang') || (navigator.language.startsWith('fr') ? 'fr' : 'en'); -->
+		<!-- applyLanguageComponent(`welcome`, lang); -->
 
 		document.getElementById('enter_chat').addEventListener('click', async () => {
 			try {
