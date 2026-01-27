@@ -18,7 +18,7 @@ if (!fs.existsSync(dataDir)){
 let messagesSave = [];
 var userTimezones = {};
 const activeUsers = {}; 
-const userId = "";
+// const userId = "";
 const database = require('./database');
 
 async function startApp() {
@@ -40,7 +40,7 @@ async function startApp() {
 			var correctPassword = process.env.CHAT_PASSWORD;					
 			if (submittedPassword === correctPassword) {
 				socket.emit('auth-result', { success: true });				
-				userId = socket.handshake.query.userId;				
+				// socket.userId = socket.handshake.query.userId;				
 			} else {
 				socket.emit('auth-result', { success: false });
 			}
