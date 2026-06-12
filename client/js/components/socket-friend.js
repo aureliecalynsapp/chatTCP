@@ -86,9 +86,10 @@ function setupSocketFriend() {
                     <div class="friend-info">
                         <span class="friend-pseudo">${friendPseudo}</span>
                     </div>
-                    <button onclick="acceptFriend('${friendRequest.idFrom}')">✅</button><button onclick="refuseFriend('${friendRequest.idFrom}')">❌</button>
+                    <button onclick="acceptFriend('${friendRequest.idFrom}')">✅</button>
                 </div>
             `;
+            //<button onclick="refuseFriend('${friendRequest.idFrom}')">❌</button>
             document.getElementById('section-requests').style.display = 'block';
             listSends.innerHTML += html;        
 //console.log(`friend-demand-success`);
