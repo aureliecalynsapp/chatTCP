@@ -35,7 +35,7 @@ document.getElementById('access-form').addEventListener('submit', async(e) => {
         try {
             const decryptedData = decryptVault(encryptedVault, typedKey);
 			if (decryptedData.pseudo === typedPseudo) {
-            	enterApp(decryptedData.pseudo, t, decryptedData.avatar);
+            	enterApp(decryptedData.pseudo, t, decryptedData.avatar, typedKey);
 			} else {alert("Identifiants incorrects.");}
         } catch (error) {
             alert("Clé de sécurité invalide. Impossible de déchiffrer le coffre.");
@@ -76,7 +76,7 @@ document.getElementById('access-new-form').addEventListener('submit', async (e) 
 	socket.once('register-success', () => {
 		//socket.disconnect();
     	socket.emit('login-register-user', { userId: userId});
-		enterApp(vaultData.pseudo, t, vaultData.avatar);
+		enterApp(vaultData.pseudo, t, vaultData.avatar, newKey);
 	});
 	socket.on('register-error', (err) => {
 		alert("Erreur : " + err.message);
@@ -89,7 +89,7 @@ document.getElementById('access_sec1_text').addEventListener('click', () => {
 	document.getElementById('access-new').style.display = 'block';	
 });
 
-async function enterApp(pseudo, t, avatar) {   
+async function enterApp(pseudo, t, avatar, key) {   
 		const currentLang = localStorage.getItem('preferred-lang') || 'fr';
 		var t = accessTranslations[currentLang];
 		var pass = prompt(t.prompt_password);			
@@ -109,6 +109,7 @@ async function enterApp(pseudo, t, avatar) {
 				myPseudo = pseudo;
 				myAvatar = avatar;
         		localStorage.setItem('user-id', userId);
+				myKey = key;
 				
 				const isMobileTactile = (('ontouchstart' in window) || (navigator.maxTouchPoints > 0)) && (window.innerWidth <= 800);
 				if (isMobileTactile) {

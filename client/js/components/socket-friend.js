@@ -32,7 +32,8 @@ function setupSocketFriend() {
                         <span class="friend-pseudo">${friendPseudo}</span>
                     </div>
                     ${f.status === 'pending' && !f.isRequester 
-                        ? `<button onclick="acceptFriend('${f.id}')">✅</button><button onclick="refuseFriend('${f.id}')">❌</button>` 
+                        // ? `<button onclick="acceptFriend('${f.id}')">✅</button><button onclick="refuseFriend('${f.id}')">❌</button>` 
+                        ? `<button onclick="acceptFriend('${f.id}')">✅</button>` 
                         : ``}
                     ${f.status === 'accepted' 
                         ? `<button onclick="joinChannel('${f.channelId}','${f.id}','${friendPseudo}','${friendAvatar}')">💬</button>` 

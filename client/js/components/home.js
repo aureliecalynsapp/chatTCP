@@ -51,7 +51,7 @@ function logout() {
     localStorage.removeItem('user-id');
     
     window.myPseudo = null;
-    window.SECRET_KEY = null;
+    window.myKey = null;
     window.myAvatar = null;
     window.currentUserId = null;
 

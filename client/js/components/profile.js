@@ -60,11 +60,12 @@ function updateProfileView() {
                     const miniBase64 = canvas.toDataURL('image/jpeg', 0.8);
 
                     // Mise à jour des affichages
-                    document.getElementById('avatar_display').src = miniBase64;
+                    avatarDisplay.src = miniBase64;
+                    myAvatar = miniBase64;
                     const headerImg = document.getElementById('header-avatar');
                     if (headerImg) headerImg.src = miniBase64;
                     
-                    saveProfileChanges(myPseudo, miniBase64);
+                    saveProfileChanges(myPseudo, miniBase64);                    
                 };
             };
             reader.readAsDataURL(file);
@@ -78,14 +79,10 @@ async function saveProfileChanges(newPseudo, newAvatarB64) {
         avatar: newAvatarB64
     };
 
-    // On chiffre avec ta clé secrète (que tu as gardée en mémoire lors du login)
-    const encryptedVault = CryptoJS.AES.encrypt(JSON.stringify(updatedVaultData), SECRET_KEY).toString();
-
-    // On génère le hash d'auth pour prouver au serveur qu'on a le droit de modifier ce userId
+    const encryptedVault = CryptoJS.AES.encrypt(JSON.stringify(updatedVaultData), myKey).toString();
     const userId = localStorage.getItem('user-id');
     const authHash = await generateAuthHash(userId);
 
-    // On envoie le tout au serveur
     socket.emit('update-vault', {
         userId: userId,
         authHash: authHash,
