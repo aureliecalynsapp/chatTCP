@@ -1,0 +1,14 @@
+#avatar_display {
+    width: 80px;
+    height: 8Opx;
+    border-radius: 50%;
+    border: 3px solid var(--bg-color-button);
+    object-fit: cover;
+    background: var(--message-bg);
+}
+#avatar-btn {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    display: flex;
+}

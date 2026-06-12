@@ -1,32 +1,50 @@
 var accessTranslations = {
     fr: {
-        access_main_title: "Accès au Bridge",
+        access_main_title: "Accès à ton compte",
         prompt_password: "Mot de passe",
         input_key: "Ta clé secrète",
         input_pseudo: "Ton pseudo",
         alert_access_denied: "Accès refusé",
         alert_key_mandatory: "Pseudo et clé obligatoires !",
         access_sec2_text: "Ne perds pas ta clé secrète !",
-        access_btn: "Entrer"
+        access_btn: "Entrer",
+        access_sec1_text: "Pas encore de compte?",
+        access_new_title: "Crée ton compte",
+        new_btn: "Créer",
+        input_pseudo_new: "Ton nouveau pseudo",
+        input_key_new: "Ta nouvelle clé secrète",
+        alert_key_length: "Pseudo (3+ car.) ou Clé (10+ car.) trop court !"
     },
     en: {
-        access_main_title: "Bridge Access",
+        access_main_title: "Account Access",
         prompt_password: "Password",
         input_key: "Your secret key",
         input_pseudo: "Your nickname",
         alert_access_denied: "Access denied",
         alert_key_mandatory: "Nickname and key are mandatory !",
         access_sec2_text: "Don't lose your secret key !",
-        access_btn: "Enter"
+        access_btn: "Enter",
+        access_sec1_text: "Don't have an account yet?",
+        access_new_title: "Create your account",
+        new_btn: "Create",
+        input_pseudo_new: "Your new username",
+        input_key_new: "Your new secret key",
+        alert_key_length: "Username (3+ char.) or Key (10+ char.) too short!"
     },
     zh: {
-        access_main_title: "访问通道",
+        access_main_title: "账号访问",
         prompt_password: "请输入密码",
         input_key: "你的加密密钥",
         input_pseudo: "你的昵称",
         alert_access_denied: "访问被拒绝",
         alert_key_mandatory: "昵称和密钥都是必填的！",
         access_sec2_text: "请务必记住你的密钥！",
-        access_btn: "进入"
+        access_btn: "进入",
+        access_sec1_text: "还没有账号吗？",
+        access_new_title: "创建你的账号",
+        new_btn: "创建",
+        input_pseudo_new: "你的新昵称",
+        input_key_new: "你的新密钥",
+        alert_key_length: "昵称（3+字符）或密钥（10+字符）太短！"
     }
 };

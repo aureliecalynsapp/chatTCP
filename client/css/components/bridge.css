@@ -1,19 +1,5 @@
-#bridge-view {
-	display : none;
+#cgu-view {
 	width: 100%;
-}
-#bridge-header {
-	align-items : center;
-	display: flex;
-}
-#bridge-header a {
-	color : var(--text-color);
-	text-decoration : none;
-	transition : 0.3s;
-}
-#bridge-header a : hover {
-	background : #dcf8c6;
-	color : #075e54;
 }
 #messages {
 	display: flex;
@@ -110,9 +96,6 @@
 }
 .is-read {
   color : #3498db !important;
-}
-#clocks-container {
-    color: var(--text-color, #333); display: flex; align-items: center; padding: 5px;
 }
 .clock-unit {
     display: flex; flex-direction: column; align-items: center; font-size: 0.7em; font-weight: bold;

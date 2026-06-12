@@ -136,7 +136,7 @@ async function loadComponentFull(name) {
 
 function onLanguageChange(newLang) {
     localStorage.setItem('preferred-lang', newLang);
-    const modules = ['welcome', 'access', 'bridge', 'cgu'];    
+    const modules = ['welcome', 'access', 'bridge', 'cgu','home','profile','friend'];    
     modules.forEach(name => {
         if (window[`${name}Translations`]) {
             applyLanguageComponent(name, newLang);

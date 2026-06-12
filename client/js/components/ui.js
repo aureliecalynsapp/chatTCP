@@ -28,12 +28,12 @@ function getHashColor(str) {
 	return c;
 }
 
-function initClockEngine() {
-    setupClocksVisibility(themTZ);
-    setInterval(updateDynamicClocks, 1000);
-    updateDynamicClocks(); 
-    console.log("Moteur des horloges activé !");
-}
+// function initClockEngine() {
+//     setupClocksVisibility(themTZ);
+//     setInterval(updateDynamicClocks, 1000);
+//     updateDynamicClocks(); 
+//     console.log("Moteur des horloges activé !");
+// }
 
 function updateDynamicClocks() {
 	var now = new Date();
@@ -129,9 +129,9 @@ function compressImage(file, callback) {
 }
 
 function sendMediaMessage(base64Data, type) {
-    if (!SECRET_KEY) return;
+    if (!currentBridge.bridgeKey) return;
 
-    var encryptedAudio = CryptoJS.AES.encrypt(base64Data, SECRET_KEY).toString();
+    var encryptedAudio = CryptoJS.AES.encrypt(base64Data, currentBridge.bridgeKey).toString();
     
     var data = {
         id: 'voice-' + Math.random().toString(36).substr(2, 9) + Date.now().toString(36),
@@ -141,7 +141,8 @@ function sendMediaMessage(base64Data, type) {
         // isEncrypted: true,
         utcDate: new Date().toISOString(),
         pseudo: myPseudo,
-		authorId: localStorage.getItem('user-id')
+		authorId: localStorage.getItem('user-id'),
+		channelId: currentBridge.channelId
     };
 
     addMessage({ ...data, content: base64Data, received: false, read:false }, 'me');
@@ -175,12 +176,6 @@ function stopTimer() {
 	clearInterval(timerInterval);
 }
 
-function requestNotificationPermission() {
-    if ("Notification" in window && Notification.permission === "default") {
-        Notification.requestPermission();
-    }
-}
-
 function sendSystemNotification(user) {
     if (Notification.permission === "granted") {
         new Notification(`Message de ${user}`, {
@@ -196,12 +191,13 @@ function sendSystemNotification(user) {
 	}
 }
 
-function deleteMessage(id, authorId) {	
+function deleteMessage(id, authorId, channelId) {	
 	var t = bridgeTranslations[currentLang];    
 	if(confirm(t.confirm_delete)) {
 		socket.emit('delete message', { 
 				id: id, 
-				authorId: authorId 
+				authorId: authorId,
+                channelId: channelId
 			});
 	}
 }
@@ -255,6 +251,6 @@ function showEmojiPicker(msgId, x, y) {
 
 function sendReaction(emoji) {
 	const currentUserId = localStorage.getItem('user-id');
-    socket.emit('message reaction', { id: activeMsgId, emoji: emoji, userId: currentUserId, pseudo: myPseudo });
+    socket.emit('message reaction', { id: activeMsgId, emoji: emoji, userId: currentUserId, pseudo: myPseudo, channelId: currentBridge.channelId });
     document.getElementById('emoji-reaction').style.display = 'none';
 }

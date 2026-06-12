@@ -1,16 +1,6 @@
 #access-view {
 	align-items: center;
-	background-color: var(--bg-color);
-	display: none;
-	flex-direction: column;
-	height: 100vh;
 	justify-content: center;
-	overflow-y: auto;
-	width: 100%;
-	-webkit-overflow-scrolling: touch;
-}
-#access-card {
-	max-width: 400px;	
 }
 h1 {
 	border-bottom: 2px solid var(--border-color);

@@ -13,31 +13,66 @@
 	<link rel="apple-touch-icon" href="assets/img/logo.png">
 </head>
 <body>
-	<div class="view" id="welcome-view">
-		<div class="lang">
-			<select class="lang-selector" id="welcome-lang-selector" onchange="onLanguageChange(this.value)">
-				<option value="fr">Français 🇫🇷</option>
-				<option value="en">English 🇬🇧</option>
-				<option value="zh">中文 🇨🇳</option>
-			</select>
-		</div>
-		<div class="card" id="welcome-card">
-			<h1 id="welcome_title"></h1>			
-			<div id="daily-quote-container">
-				<h2 id="quote_intro"></h2>
-				<p id="quote-text">--</p>
+	<div class="app-container">
+		<header id="main-header">
+			<button id="return_btn" style="margin-left: 10px; display: none;">↩️</button>
+			<div style="font-weight: bold;" id="header_title"></div>
+			<div id="friend-header" class="avatar"></div>
+			<div id="clocks-container" style="display: none;">
+				<div class="clock-unit">
+					<div class="analog-clock" id="them-analog">
+						<div class="hand hour"></div>
+						<div class="hand minute"></div>
+						<div class="center-dot"></div>
+					</div>
+					<div id="them-city-name">--</div>
+				</div>
+				<div class="clock-unit">
+					<div class="analog-clock" id="me-analog">
+						<div class="hand hour"></div>
+						<div class="hand minute"></div>
+						<div class="center-dot"></div>
+					</div>
+					<div id="me-city-name">--</div>
+				</div>
 			</div>
-			<button id="enter_chat"></button>
-		</div>
-		<div >
-			<span style="background: rgba(0,0,0,0.05); padding: 2px 8px; border-radius: 10px; color: #bbb; font-size: 9px; letter-spacing: 1px">
-				RELEASE 1.9.2
-			</span>
-		</div>
+			<div id="header-avatar" class="avatar" style="display: none;">
+				<img alt="Avatar" >
+			</div>
+			<div class="header-right" style="margin-right: 10px;">
+				<button id="cgu_btn_wc" style="background: none; font-size: 1.2rem;"></button>
+				<button id="theme-toggle" style="background: none; font-size: 1.2rem;">🌙</button>
+				<select class="lang-selector" id="lang-selector" onchange="onLanguageChange(this.value)" style="cursor: pointer; margin: 5px;">
+					<option value="fr">Français 🇫🇷</option>
+					<option value="en">English 🇬🇧</option>
+					<option value="zh">中文 🇨🇳</option>
+				</select>
+			</div>
+		</header>
+		<main class="views-wrapper">
+			<div class="view" id="welcome-view" style="display: flex;">
+				<div class="card" id="welcome-card">
+					<h1 id="welcome_title"></h1>			
+					<div id="daily-quote-container">
+						<h2 id="quote_intro"></h2>
+						<p id="quote-text">--</p>
+					</div>
+					<button id="enter_chat"></button>
+				</div>
+				<div >
+					<span style="background: rgba(0,0,0,0.05); padding: 2px 8px; border-radius: 10px; color: #bbb; font-size: 9px; letter-spacing: 1px">
+						RELEASE 2.0.0
+					</span>
+				</div>
+			</div>
+			<div class="view" id="access-view" style="display: none;"></div>
+			<div class="view" id="home-view" style="display: none;"></div>
+			<div class="view" id="profile-view" style="display: none;"></div>
+			<div class="view" id="friend-view" style="display: none;"></div>
+			<div class="view" id="bridge-view" style="display: none;"></div>
+			<div class="view" id="cgu-view" style="display: none;"></div>
+		</main>
 	</div>
-	<div class="view" id="access-view"></div>
-	<div class="view" id="bridge-view"></div>
-	<div class="view" id="cgu-view"></div>
     <script>
 		window.onload = function() {
 			try {
@@ -51,15 +86,49 @@
 				alert("Erreur JS : " + e.message);
 			}
 		};
-		<!-- var lang = localStorage.getItem('preferred-lang') || (navigator.language.startsWith('fr') ? 'fr' : 'en'); -->
-		<!-- applyLanguageComponent(`welcome`, lang); -->
 
+		document.getElementById('main-header').addEventListener('click', async (e) => {
+			const target = e.target.closest('[id]'); 
+			if (!target) return;
+			const id = target.id;
+
+			switch (id) {
+				case 'cgu_btn_wc':
+					try {
+						loadComponentFull(`cgu`)
+						document.getElementById('welcome-view').style.display = 'none';
+						document.getElementById('cgu-view').style.display = 'flex';	
+            			document.getElementById('return_btn').style.display = 'flex';
+            			document.getElementById('cgu_btn_wc').style.display = 'none';
+            			localStorage.setItem('returnWelcome', 'yes');
+					} catch (err) {
+						console.error("Erreur de chargement du module cgu :", err);
+					}
+					break;
+
+				case 'theme-toggle':
+					var isDark = document.documentElement.hasAttribute('theme');
+					if (isDark) {
+						document.documentElement.removeAttribute('theme');
+						e.target.innerText = '🌙';
+						localStorage.setItem('theme', 'light');
+					} else {
+						document.documentElement.setAttribute('theme', 'dark');
+						e.target.innerText = '☀️';
+						localStorage.setItem('theme', 'dark');
+					}
+					break;
+				}
+		});	
+			
 		document.getElementById('enter_chat').addEventListener('click', async () => {
 			try {
 			
 				await loadComponentFull(`access`)
 				document.getElementById('welcome-view').style.display = 'none';
-				document.getElementById('access-view').style.display = 'flex';
+				document.getElementById('access-view').style.display = 'flex';	
+				document.getElementById('cgu_btn_wc').style.display = 'none';			
+				await loadLibsJs(`crypto-js.min`);
 				
 			} catch (err) {
 				console.error("Erreur de chargement des scripts :", err);

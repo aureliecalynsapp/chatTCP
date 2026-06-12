@@ -1,11 +1,6 @@
 #welcome-view {
 	align-items: center;
-	background-color: var(--bg-color);
-	display: flex;
-	flex-direction: column;
-	height: 100vh;
 	justify-content: center;
-	width: 100%;
 }
 #daily-quote-container {
 	background: var(--bg-color);
@@ -13,7 +8,4 @@
 	font-style: italic;
     margin: 15px 0;
 	padding: 10px;
-}
-#welcome-card {
-	max-width: 400px;	
 }

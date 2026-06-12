@@ -1,8 +1,6 @@
 // bridge.js
 
 var input = document.getElementById('input_placeholder');
-var SECRET_KEY = "";
-var myPseudo = "";
 var typingTimeout;
 let emojiPicker = null;
 let mediaRecorder = null;
@@ -10,44 +8,34 @@ let audioChunks = [];
 
 var savedTheme = localStorage.getItem('theme') || 'light';
 if (savedTheme === 'dark') {
-    document.documentElement.setAttribute('data-theme', 'dark');
+    document.documentElement.setAttribute('theme', 'dark');
 }
 
+document.getElementById('main-header').addEventListener('click', (e) => {
+    if (e.target && e.target.id === 'return_btn') {
+		e.preventDefault();
+        document.getElementById('home-view').style.display = 'flex';
+        document.getElementById('bridge-view').style.display = 'none';
+		document.getElementById('messages').innerHTML = '';
+		document.getElementById('friend-header').innerHTML = '';
+        document.getElementById('return_btn').style.display = 'none';
+		socket.emit('out-channel', currentBridge.channelId);
+        document.getElementById('clocks-container').style.display = 'none';
+		currentBridge.channelId = null;
+		currentBridge.friendlId = null;
+		currentBridge.bridgeKey = null;
+    }	
+});
+
 function setupDynamicListeners() {
+	const currentUserId = localStorage.getItem('user-id');
+
     document.addEventListener('click', async (e) => {
         const target = e.target.closest('[id]'); 
         if (!target) return;
         const id = target.id;
 
-        switch (id) {
-            case 'cgu_btn':
-				try {
-					loadComponentFull(`cgu`)
-					document.getElementById('bridge-view').style.display = 'none';
-					document.getElementById('cgu-view').style.display = 'flex';	
-				} catch (err) {
-					console.error("Erreur de chargement du module cgu :", err);
-				}
-                break;
-
-            // case 'return-bridge':
-                // document.getElementById('bridge-view').style.display = 'flex';
-                // document.getElementById('cgu-view').style.display = 'none';
-                // break;
-
-            case 'theme-toggle':
-                var isDark = document.documentElement.hasAttribute('data-theme');
-				if (isDark) {
-					document.documentElement.removeAttribute('data-theme');
-					e.target.innerText = '🌙';
-					localStorage.setItem('theme', 'light');
-				} else {
-					document.documentElement.setAttribute('data-theme', 'dark');
-					e.target.innerText = '☀️';
-					localStorage.setItem('theme', 'dark');
-				}
-                break;
-				
+        switch (id) {				
 			case 'load_more_btn':
 				const firstMessage = document.querySelector('li.message'); 
 				if (firstMessage) {
@@ -55,7 +43,7 @@ function setupDynamicListeners() {
 					console.log("Chargement des messages avant l'ID :", lastId);
 					
 					// 3. On envoie la demande au serveur
-					socket.emit('load more', { canalId: '1', lastId: lastId });
+					socket.emit('load more', { channelId: currentBridge.channelId, lastId: lastId, userId: currentUserId });
 				} else {
 					console.log("Aucun message trouvé pour servir de référence.");
 				}
@@ -124,7 +112,7 @@ function setupDynamicListeners() {
 
 						mediaRecorder.onstop = async () => {
 							stopTimer();
-							socket.emit('stop typing');
+							socket.emit('stop typing', currentBridge.channelId);
 							var audioBlob = new Blob(audioChunks, { type: mediaRecorder.mimeType });
 							
 							var reader = new FileReader();
@@ -137,7 +125,7 @@ function setupDynamicListeners() {
 
 						mediaRecorder.start();
 						startTimer();
-						socket.emit('typing', myPseudo);
+						socket.emit('typing', myPseudo, currentBridge.channelId);
 						voiceBtn.textContent = "🛑";
 						document.getElementById('recording-status').style.display = "inline";
 					} catch (err) {
@@ -147,7 +135,7 @@ function setupDynamicListeners() {
 					// ARRÊTER
 					mediaRecorder.stop();
 					stopTimer();
-					socket.emit('stop typing');
+					socket.emit('stop typing', currentBridge.channelId);
 					voiceBtn.textContent = "🎤";
 					document.getElementById('recording-status').style.display = "none";
 				}
@@ -172,9 +160,9 @@ function setupDynamicListeners() {
 	input.addEventListener('input', function() {
 		this.style.height = 'auto';
 		this.style.height = (this.scrollHeight) + 'px';
-		socket.emit('typing', myPseudo);
+		socket.emit('typing', myPseudo, currentBridge.channelId);
 		clearTimeout(typingTimeout);
-		typingTimeout = setTimeout(() => socket.emit('stop typing'), 5000);
+		typingTimeout = setTimeout(() => socket.emit('stop typing', currentBridge.channelId), 5000);
 	});
 		
 	// ENVOI DE PHOTOS CHIFFRÉES AVEC COMPRESSION ---
@@ -187,7 +175,7 @@ function setupDynamicListeners() {
 			var reader = new FileReader();
 			reader.onload = function(event) {
 				var rawImageData = event.target.result;
-				var encryptedImage = CryptoJS.AES.encrypt(rawImageData, SECRET_KEY).toString();						
+				var encryptedImage = CryptoJS.AES.encrypt(rawImageData, currentBridge.bridgeKey).toString();						
 				var imageData = {
 					id: 'img-' + Math.random().toString(36).substr(2, 9) + Date.now().toString(36),
 					// text: "", 
@@ -196,7 +184,8 @@ function setupDynamicListeners() {
 					// isEncrypted: true,
 					utcDate: new Date().toISOString(),
 					pseudo: myPseudo,
-					authorId: localStorage.getItem('user-id')
+					authorId: localStorage.getItem('user-id'),
+					channelId: currentBridge.channelId
 				};
 				addMessage({ ...imageData, content: rawImageData, received: false, read:false }, 'me');
 				socket.emit('chat message', imageData);
@@ -205,7 +194,7 @@ function setupDynamicListeners() {
 		} 
 		else {
 			compressImage(file, function(compressedBase64) {
-				var encryptedImage = CryptoJS.AES.encrypt(compressedBase64, SECRET_KEY).toString();
+				var encryptedImage = CryptoJS.AES.encrypt(compressedBase64, currentBridge.bridgeKey).toString();
 				var imageData = {
 					id: 'img-' + Math.random().toString(36).substr(2, 9) + Date.now().toString(36),
 					// text: "", 
@@ -214,7 +203,8 @@ function setupDynamicListeners() {
 					// isEncrypted: true,
 					utcDate: new Date().toISOString(),
 					pseudo: myPseudo,
-					authorId: localStorage.getItem('user-id')
+					authorId: localStorage.getItem('user-id'),
+					channelId: currentBridge.channelId
 				};
 				addMessage({ ...imageData, content: compressedBase64, received: false, read:false }, 'me');
 				socket.emit('chat message', imageData);
@@ -224,34 +214,17 @@ function setupDynamicListeners() {
 	});
 }
 
-function setupMobileListeners() {		
-	document.addEventListener('touchmove', (e) => {
-		if (e.scale !== 1) { 
-			e.preventDefault(); }
-	}, { passive: false });
-		
-	document.addEventListener('touchstart', (e) => {
-		if (e.touches.length > 1) {
-			e.preventDefault(); 
-		}
-	}, { passive: false });
-
-	document.addEventListener('gesturestart', (e) => {
-		e.preventDefault();
-	});
-}
-
 // ENVOI DE TEXTE ---
 document.getElementById('bridge-view').addEventListener('submit', (e) => {
 	e.preventDefault();
 	const editId = input.getAttribute('data-edit-id')
 	if (input.value.trim()) {			
 		if (editId) {
-			var encryptedText = CryptoJS.AES.encrypt(input.value, SECRET_KEY).toString();
-			socket.emit('edit message', { id: editId, newText: encryptedText, pseudo: myPseudo, authorId: localStorage.getItem('user-id') });
+			var encryptedText = CryptoJS.AES.encrypt(input.value, currentBridge.bridgeKey).toString();
+			socket.emit('edit message', { id: editId, newText: encryptedText, pseudo: myPseudo, authorId: localStorage.getItem('user-id'), channelId: currentBridge.channelId });
 			input.removeAttribute('data-edit-id');			
 		} else {
-			var encryptedText = CryptoJS.AES.encrypt(input.value, SECRET_KEY).toString();
+			var encryptedText = CryptoJS.AES.encrypt(input.value, currentBridge.bridgeKey).toString();
 			var data = { 
 				content: encryptedText, 
 				type: 'text',
@@ -259,15 +232,16 @@ document.getElementById('bridge-view').addEventListener('submit', (e) => {
 				pseudo: myPseudo, 
 				// isEncrypted: true, 
 				id: 'msg-' + Math.random().toString(36).substr(2, 9) + Date.now().toString(36),
-				authorId: localStorage.getItem('user-id')
+				authorId: localStorage.getItem('user-id'),
+				channelId: currentBridge.channelId
 			};
-					
+//console.log("currentBridge.channelId dans bridge.js :", currentBridge.channelId);					
 			addMessage({ ...data, received: false, read:false}, 'me');
 			socket.emit('chat message', data);
 		}
 		input.value = '';
 		input.style.height = 'auto';
-		socket.emit('stop typing');
+		socket.emit('stop typing', currentBridge.channelId);
 	}
 });
     		
@@ -290,7 +264,7 @@ document.addEventListener('visibilitychange', () => {
 		
 		if (pendingReadIds.length > 0) {
 			pendingReadIds.forEach(id => {
-				socket.emit('confirm read', id, currentUserId, myPseudo);
+				socket.emit('confirm read', id, currentUserId, myPseudo, currentBridge.channelId);
 			});
 			pendingReadIds = [];
 		}
@@ -298,11 +272,11 @@ document.addEventListener('visibilitychange', () => {
 });
 
 // Moteur horloge
-// document.addEventListener('DOMContentLoaded', () => {				
-	// setupClocksVisibility(themTZ);
-	// setInterval(updateDynamicClocks, 1000);
-	// console.log("Moteur des horloges prêt (en attente de connexion)");
-// });
+/*document.addEventListener('DOMContentLoaded', () => {				
+	setupClocksVisibility(themTZ);
+	setInterval(updateDynamicClocks, 1000);
+	console.log("Moteur des horloges prêt (en attente de connexion)");
+});*/
 	
 // Capture les erreurs JavaScript globales
 window.onerror = function(message, source, lineno, colno, error) {
@@ -331,10 +305,10 @@ function addMessage(data, side, isPrepend = false) {
 	let success = true;
 
 	// --- LOGIQUE DE DÉCHIFFREMENT ---
-	if (data.type && SECRET_KEY) {
+	if (data.type && currentBridge.bridgeKey) {
 		try {
 			if (data.type === 'text' && data.content && data.content.length > 0) {
-				var textBytes = CryptoJS.AES.decrypt(data.content, SECRET_KEY);
+				var textBytes = CryptoJS.AES.decrypt(data.content, currentBridge.bridgeKey);
 				var decryptedText = textBytes.toString(CryptoJS.enc.Utf8);
 				displayText = decryptedText || t.key_ko;
 			}
@@ -342,7 +316,7 @@ function addMessage(data, side, isPrepend = false) {
 				if (data.content.startsWith('data:image')) {
 					displayImage = data.content;
 				} else {
-					var imgBytes = CryptoJS.AES.decrypt(data.content, SECRET_KEY);
+					var imgBytes = CryptoJS.AES.decrypt(data.content, currentBridge.bridgeKey);
 					var decryptedImg = imgBytes.toString(CryptoJS.enc.Utf8);
 					displayImage = decryptedImg || null;
 					if (!displayImage) displayText = t.key_ko;
@@ -354,7 +328,7 @@ function addMessage(data, side, isPrepend = false) {
 					if (data.content.startsWith('data:audio')) {
 						rawBase64 = data.content;
 					} else {
-						var audioBytes = CryptoJS.AES.decrypt(data.content, SECRET_KEY);
+						var audioBytes = CryptoJS.AES.decrypt(data.content, currentBridge.bridgeKey);
 						rawBase64 = audioBytes.toString(CryptoJS.enc.Latin1);
 					}
 					if (!rawBase64 || !rawBase64.startsWith('data:audio')) {
@@ -401,7 +375,7 @@ function addMessage(data, side, isPrepend = false) {
 	var tickContent = (data.received) ? '✓✓' : '✓';
 	var tickColor = (data.read) ? 'color: #3498db;' : '';
 	var statusCheckHtml = (side === 'me') ? `<span class="status-check" id="tick-${data.id || Date.now()}" style="${tickColor}">${tickContent}</span>` : "";
-	var deleteBtnHtml = (side === 'me' && displayText !== t.key_ko) ? `<div class="deleted-btn" style="cursor:pointer; margin-right:8px;" onclick="deleteMessage('${data.id}','${data.authorId}')">🗑️</div>` : "";
+	var deleteBtnHtml = (side === 'me' && displayText !== t.key_ko) ? `<div class="deleted-btn" style="cursor:pointer; margin-right:8px;" onclick="deleteMessage('${data.id}','${data.authorId}','${data.channelId}')">🗑️</div>` : "";
 	var editBtnHtml = (side === 'me' && data.type === 'text' && data.content.length > 0 && displayText !== t.key_ko) ? `<div class="edited-btn" style="cursor:pointer; margin-right:8px;" onclick="editMessage('${data.id}')">✏️</div>` : "";
 	var editedMsg = (data.modifiedDate) ? `<span class="edited-label" style="font-size:0.7em; opacity:0.5;">(modifié) </span>` : "";// à refaire
 

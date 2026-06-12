@@ -1,0 +1,33 @@
+<nav class="main-nav">
+    <button id="profil_btn" class="nav-btn"></button>
+    <div style="display: flex;">
+        <button id="friend_btn" class="nav-btn" style="flex-grow: 1;"></button>
+        <button id="friend_request_btn" class="nav-btn" style="display: none;"></button>
+    </div>
+    <button id="chat_btn" class="nav-btn"></button>
+    <button id="cgu_btn" class="nav-btn"></button>
+    <button id="logout_btn" class="nav-btn" onclick="logout()"></button>
+</nav>
+<main class="home-content">
+    <header class="home-header">
+        <h1 id="home_user_pseudo">...</h1>
+        <p id="last_login"style="display: none;"><span id="last_conn_date">Aujourd'hui</span></p>
+    </header>
+    <section class="stats-grid" style="display: none;">
+        <div class="card">
+            <span class="stat-value" id="stat_friends_online">0</span>
+            <span id="friends_online"></span>
+        </div>
+        <div class="card">
+            <span class="stat-value pulse" id="stat_new_messages">0</span>
+            <span id="new_msg"></span>
+        </div>
+        <div class="card">
+            <span class="stat-value" id="stat_friend_req">0</span>
+            <span id="new_friend"></span>
+        </div>
+    </section>
+    <div class="welcome-action">
+        <p id="what"></p>
+    </div>
+</main>

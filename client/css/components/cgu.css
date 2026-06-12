@@ -1,12 +1,8 @@
 #cgu-view {
-	background-color: var(--bg-color);
-	display: block;
-	height: 100vh;
+	max-height: 100vh;
+	overflow-y: auto;	
 	width: 100%;
 	-webkit-overflow-scrolling: touch;
-}
-#cgu-card {
-	overflow-y: auto;	
 }
 h1 {
 	border-bottom: 2px solid var(--border-color);

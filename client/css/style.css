@@ -10,10 +10,10 @@ overflow: hidden; = Empêche le corps de la page de bouger
 word-wrap: break-word; = Évite que le texte ne dépasse sur les petits écrans
 */
 
- :root {
+:root {
   --bg-color : #c1adc2;--text-color : #333333;--header-bg : #9e82a0;--message-bg : #f1f1f1;--border-color : #dddddd;--bg-color-me : #dcf8c6;--bg-color-them : #ffffff;--bg-color-button : #856088;--text-color-me : #2d232e
 }
-[data-theme="dark"] {
+[theme="dark"] {
   --bg-color : #423143;--text-color : #cccccc;--header-bg : #68506a;--message-bg : #2d2d2d;--border-color : #333333;--bg-color-me : #dcf8c6;--bg-color-them : #ffffff;--bg-color-button : #856088;--text-color-me : #2d232e
 }
 body {
@@ -29,6 +29,13 @@ body {
 	padding : 0;
 	transition : background-color 0.3s, color 0.3s;
 }
+.app-container {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    max-width: 800px;
+	width: 100%;
+}
 button {
 	background : var(--bg-color-button);
 	border: none;
@@ -42,20 +49,28 @@ button {
 .input {
   flex-grow : 1; border: none; padding: 10px 15px; border-radius: 20px; outline: none; resize : none; max-height : 150px; font-family: inherit; font-size: 16px; overflow-y : hidden; margin: 5px
 }
+.views-wrapper {
+    flex-grow: 1; /* Prend tout l'espace restant */
+    overflow: hidden; /* Important pour que les vues ne débordent pas */
+    position: relative;
+}
 .view {
 	box-shadow: 0 0 15px rgba(0,0,0,0.1);
 	flex-direction : column;
-	height : 100dvh;
-	height : 100vh;
-	height: -webkit-fill-available;
-	left: 0;
-	left: 50%;
-	margin: 0 auto;
-	max-width: 800px;
-	overflow: hidden;
-	position: absolute;
-	transform: translateX(-50%);
+    height: 100% !important;
+    width: 100%;
+}
+#main-header {
+	box-shadow : 0 2px 5px rgba(0, 0,0, 0.1);
+	background-color : var(--header-bg);
+	border-bottom : 1px solid var(--border-color);
+	border-radius : 4px;
+	flex-shrink: 0;
+	justify-content : space-between;
+	padding : 10px 0px;
 	top: 0;
+	align-items : center;
+	display: flex;
 }
 .header {
 	box-shadow : 0 2px 5px rgba(0, 0,0, 0.1);
@@ -64,8 +79,10 @@ button {
 	border-radius : 4px;
 	flex-shrink: 0;
 	justify-content : space-between;
-	padding : 10px 15px;
+	padding : 10px 0px;
 	top: 0;
+	align-items : center;
+	display: flex;
 }
 .lang {
     position: absolute; top: 20px; right: 20px;
@@ -87,6 +104,18 @@ button {
 	font-style : italic;
 	opacity: 0.6;
 	text-align: right;
+}
+.avatar {
+    position: relative;
+    margin: 0 auto;
+}
+#header-avatar {
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    border: 3px solid var(--bg-color-button);
+    object-fit: cover;
+    background: var(--message-bg);
 }
 @media screen and (max-width: 800px) { /* reduction d'élément pour les smartphones */
 	body.chat-open {
@@ -118,4 +147,5 @@ button {
     }
 	#emoji-btn {
         display: none !important;
+	}
 }

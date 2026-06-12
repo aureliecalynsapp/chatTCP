@@ -1,0 +1,26 @@
+<div class="card">
+    <div class="my-code-box">
+        <div id="my_id"></div>
+        <strong id="display-my-id">CHARGEMENT...</strong>
+        <button onclick="copyMyId()">📋</button>
+    </div>
+    <div class="add-friend-section">
+        <input type="text" id="input-target-id" placeholder="Coller le Code Ami ici..." maxlength="14">
+        <button id="btn_send_request" onclick="sendFriendRequest()"></button>
+    </div>
+</div>
+<div class="card" id="section-requests" style="display:none;">
+    <div class="friends-section" >
+        <h3 id="title_sends"></h3>
+        <div id="list-sends" class="friend-list"></div>
+        <h3 id="title_requests"></h3>
+        <div id="list-requests" class="friend-list"></div>
+    </div>
+</div>
+<div class="card">
+    <div class="friends-section">
+        <h3 id="title_list"></h3>
+        <div id="list-friends" class="friend-list">            
+        </div>
+    </div>
+</div>

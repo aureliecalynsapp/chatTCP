@@ -1,7 +1,6 @@
 var bridgeTranslations = {
     fr: {
-        header_title: "💬 Mon Chat Sécurisé",
-        cgu_btn: "📜 CGU",
+        //header_title: "💬 Mon Chat Sécurisé",
         input_placeholder: "Écrivez ...",
         send_btn: "Envoyer",
         typing: " est en train d'écrire...",
@@ -10,8 +9,7 @@ var bridgeTranslations = {
 		confirm_delete: "Voulez-vous vraiment supprimer ce message ?"
     },
     en: {
-        header_title: "💬 My Secure Chat",
-        cgu_btn: "📜 TOS",
+        //header_title: "💬 My Secure Chat",
         input_placeholder: "Type a message...",
         send_btn: "Send",
         typing: " is typing...",
@@ -20,8 +18,7 @@ var bridgeTranslations = {
 		confirm_delete: "Do you really want to delete this message?"
     },
     zh: {
-        header_title: "💬 我的安全聊天",
-        cgu_btn: "📜 使用条款",
+        //header_title: "💬 我的安全聊天",
         input_placeholder: "输入消息...",
         send_btn: "发送",
         typing: " 正在输入...",

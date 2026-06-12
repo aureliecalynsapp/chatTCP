@@ -1,0 +1,38 @@
+#friend-view {
+	max-height: 100vh;
+	overflow-y: auto;	
+	width: 100%;
+	-webkit-overflow-scrolling: touch;
+}
+.friend-item {
+    display: flex;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.08); /* Effet translucide */
+    margin-bottom: 10px;
+    padding: 5px 5px;
+    border-radius: 50px;
+    transition: transform 0.2s;
+}
+.friend-item:hover {
+    background: rgba(255, 255, 255, 0.12);
+    transform: translateX(5px);
+}
+.friend-avatar {
+    width: 45px;
+    height: 45px;
+    border-radius: 50px;
+    border: 3px solid var(--bg-color-button);
+    margin-right: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.friend-info {
+    flex-grow: 1; 
+    display: flex;
+    flex-direction: column;
+}
+.friend-pseudo {
+    font-weight: 600;
+    color: #ffffff;
+}

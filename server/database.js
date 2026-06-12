@@ -23,8 +23,8 @@ const database = {
 			await dbRun(`
 				CREATE TABLE IF NOT EXISTS messages (
 					message_id TEXT NOT NULL,
-					canal_id TEXT NOT NULL,
-					author_id TEXT NOT NULL,
+					channel_id TEXT NOT NULL,
+					user_id TEXT NOT NULL,
 					pseudo TEXT NOT NULL,
 					type TEXT NOT NULL,
 					content TEXT NOT NULL,
@@ -36,13 +36,10 @@ const database = {
 				)
 			`);
 			
-			// INDEX pour charger les messages d'un canal instantanément
-			await dbRun(`CREATE INDEX IF NOT EXISTS idx_canal ON messages(canal_id)`);
-			
-			// INDEX pour filtrer par auteur au sein d'un canal
-			await dbRun(`CREATE INDEX IF NOT EXISTS idx_canal_author ON messages(canal_id, author_id)`);
+			await dbRun(`CREATE INDEX IF NOT EXISTS idx_channel ON messages(channel_id)`);
+			await dbRun(`CREATE INDEX IF NOT EXISTS idx_channel_user ON messages(channel_id, user_id)`);
 
-			// Table des status
+			// Table des reactions
 			await dbRun(`
 				CREATE TABLE IF NOT EXISTS reactions (
 					message_id TEXT NOT NULL,
@@ -58,16 +55,53 @@ const database = {
 			
 			await dbRun(`CREATE INDEX IF NOT EXISTS idx_message ON reactions(message_id)`);
 			
-			// Table des réactions
-			// await dbRun(`
-				// CREATE TABLE IF NOT EXISTS reactions (
-					// message_id TEXT,
-					// user_id TEXT,
-					// emoji TEXT,
-					// PRIMARY KEY (message_id, user_id, emoji),
-					// FOREIGN KEY (message_id) REFERENCES messages(message_id) ON DELETE CASCADE
-				// )
-			// `);
+			// Table des users
+			await dbRun(`
+				CREATE TABLE IF NOT EXISTS users (
+					user_id TEXT NOT NULL,
+					auth_hash TEXT NOT NULL,
+					vault TEXT NOT NULL,	-- pseudo + avatar
+					created_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+					modified_date DATETIME,
+					PRIMARY KEY (user_id)
+				)
+			`);
+			
+			// Table des friends
+			await dbRun(`
+				CREATE TABLE IF NOT EXISTS friends (
+					user_id_1 TEXT NOT NULL,
+					user_id_2 TEXT NOT NULL,
+					status TEXT DEFAULT 'pending',
+					action_user_id TEXT, -- Qui a envoyé la demande
+					vault_1 TEXT,
+					vault_2 TEXT,
+					created_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+					modified_date DATETIME,
+					PRIMARY KEY (user_id_1, user_id_2)
+				)
+			`);
+
+			// Table des channels
+			await dbRun(`
+				CREATE TABLE IF NOT EXISTS channels (
+					channel_id TEXT NOT NULL,
+					type TEXT,
+					created_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+					PRIMARY KEY (channel_id)
+				)
+			`);
+			
+			// Table des channel_members
+			await dbRun(`
+				CREATE TABLE IF NOT EXISTS channel_members (
+					channel_id TEXT NOT NULL,
+					user_id TEXT,
+					PRIMARY KEY (channel_id, user_id),
+					FOREIGN KEY (channel_id) REFERENCES channels(channel_id),
+					FOREIGN KEY (user_id) REFERENCES users(user_id)
+				)
+			`);
 
 			console.log("Tables initialisées avec succès.");
 		} catch (err) {
@@ -75,11 +109,206 @@ const database = {
 		}
 	},
 
+	async insertUser(userId, authHash, vault) {
+		const sql = `INSERT INTO users (user_id, auth_hash, vault) VALUES (?, ?, ?)`;		
+		try {
+			const result = await dbRun(sql, [userId, authHash, vault]);
+			return {
+				success: true
+			};
+		} catch (err) {
+			// Gestion spécifique du doublon (si l'utilisateur existe déjà)
+			if (err.message.includes("UNIQUE constraint failed")) {
+				return {
+					success: false,
+					error: "ALREADY_EXISTS"
+				};
+			}
+			console.error("Erreur DB lors de l'insertion utilisateur:", err);
+			throw err;
+		}
+	},
+
+	async updateUser(userId,newVault) {
+		// On met à jour la colonne vault pour l'ID correspondant
+		const sql = `UPDATE users SET vault = ?, modified_date = CURRENT_TIMESTAMP WHERE user_id = ?`;
+		
+		try {
+			const result = await dbRun(sql, [newVault, userId]);
+			return {
+				success: true
+			};
+		} catch (err) {
+			console.error("Erreur DB lors de la mise à jour du vault:", err);
+			return {
+				success: false,
+				error: err.message
+			};
+		}
+	},
+
+	async getUser(userId, authHash) {
+		const sql = `SELECT vault FROM users WHERE user_id = ? AND auth_hash = ?`;		
+		try {
+			const row = await dbGet(sql, [userId, authHash]);			
+			if (row) {
+				return {
+					success: true,
+					vault: row.vault
+				};
+			} else {
+				return {
+					success: false,
+					error: "AUTH_FAILED"
+				};
+			}
+		} catch (err) {
+			console.error("Erreur DB lors de la récupération utilisateur:", err);
+			throw err;
+		}
+	},
+
+	async getFriends(userId) {
+		/*const sql = `SELECT DISTINCT f.*, cm1.channel_id 
+					FROM friends f
+					LEFT JOIN channel_members AS cm1 ON (f.user_id_1 = cm1.user_id AND f.status = 'accepted')
+					LEFT JOIN channel_members AS cm2 ON (f.user_id_2 = cm2.user_id AND cm1.channel_id = cm2.channel_id) 
+					WHERE (user_id_1 = ? OR user_id_2 = ?)`;	*/
+					
+
+		const sql = `SELECT DISTINCT f.*, m.channel_id 
+					FROM friends f
+					LEFT JOIN 
+					(SELECT cm1.channel_id, cm1.user_id AS u1, cm2.user_id AS u2
+					FROM channel_members AS cm1
+					INNER JOIN channel_members AS cm2 ON  cm1.channel_id = cm2.channel_id AND cm1.user_id != cm2.user_id) AS m
+					ON m.u1 = f.user_id_1 AND m.u2 = f.user_id_2
+					WHERE (user_id_1 = ? OR user_id_2 = ?)`;	
+					
+		try {
+			const rows = await dbAll(sql, [userId, userId]);	
+			
+			//console.log("Données brutes SQL :", rows);
+			return {
+				success: true,
+				friends: (rows && rows.length > 0) ? rows.map(row => this.mapFriend(row)): []
+			};
+		} catch (err) {
+			console.error("Erreur DB lors de la récupération des amis:", err);
+			return { 
+				success: false, 
+				error: "DB_ERROR", 
+				friends: [] };
+		}
+
+	},
+
+	async insertFriend(idFrom, idTo, vaultFrom) {
+		const [u1, u2, u3, u4] = idFrom < idTo ? [idFrom, idTo, vaultFrom, null] : [idTo, idFrom, null, vaultFrom];
+		const sql = `INSERT INTO friends (user_id_1, user_id_2, action_user_id, vault_1, vault_2) VALUES (?, ?, ?, ?, ?)`;
+		try {
+			const result = await dbRun(sql,[u1,u2,idFrom,u3,u4]);
+			return {
+				success: true
+			}
+		} catch (err) {
+			if (err.message.includes("UNIQUE constraint failed")) {
+				return {
+					success: false,
+					error: "ALREADY_EXISTS"
+				};
+			}
+			console.error("Erreur DB lors de l'insertion d'ami:", err);
+			throw err;
+		}
+	},
+	
+	async acceptFriend(idTo, idFrom, vaultFrom) {
+		if(idFrom < idTo) {
+			const sql = `UPDATE friends SET status = 'accepted', modified_date = CURRENT_TIMESTAMP, vault_1 = ?
+						WHERE user_id_1 = ? and user_id_2 = ? and action_user_id != ?`;		
+			try {
+				const result = await dbRun(sql, [vaultFrom, idFrom, idTo, idFrom]);
+				return {
+					success: true
+				};
+			} catch (err) {
+				console.error("Erreur DB lors de la mise à jour d'ami accepté:", err);
+				return {
+					success: false,
+					error: err.message
+				};
+			}
+		} else {
+			const sql = `UPDATE friends SET status = 'accepted', modified_date = CURRENT_TIMESTAMP, vault_2 = ?
+						WHERE user_id_1 = ? and user_id_2 = ? and action_user_id != ?`;		
+			try {
+				const result = await dbRun(sql, [vaultFrom, idTo, idFrom, idFrom]);
+				return {
+					success: true
+				};
+			} catch (err) {
+				console.error("Erreur DB lors de la mise à jour d'ami accepté:", err);
+				return {
+					success: false,
+					error: err.message
+				};
+			}
+
+		}
+	},
+
+	async createChannel(userID1, userId2, channelId) {
+		const sql = `INSERT INTO channels (channel_id, type) VALUES (?, ?)`;
+		try {
+			const result = await dbRun(sql,[channelId,'one-to-one']);
+			const sql2 = `INSERT INTO channel_members (channel_id, user_id) VALUES (?, ?)`;
+			try {
+				const result = await dbRun(sql2,[channelId,userID1]);
+				try {
+					const result = await dbRun(sql2,[channelId,userId2]);
+					return {
+						success: true
+					}
+				} catch (err) {
+					if (err.message.includes("UNIQUE constraint failed")) {
+						return {
+							success: false,
+							error: "ALREADY_EXISTS"
+						};
+					}
+					console.error("Erreur DB lors de l'insertion d'un canal:", err);
+					throw err;
+				}
+			} catch (err) {
+				if (err.message.includes("UNIQUE constraint failed")) {
+					return {
+						success: false,
+						error: "ALREADY_EXISTS"
+					};
+				}
+				console.error("Erreur DB lors de l'insertion d'un canal:", err);
+				throw err;
+			}
+		} catch (err) {
+			if (err.message.includes("UNIQUE constraint failed")) {
+				return {
+					success: false,
+					error: "ALREADY_EXISTS"
+				};
+			}
+			console.error("Erreur DB lors de l'insertion d'un canal:", err);
+			throw err;
+		}
+		
+		
+	},
+
 	async saveMessage(msgData) {
 		const bytes = Buffer.byteLength(msgData.content, 'utf8');
-		const sql = `INSERT INTO messages (message_id, canal_id, author_id, pseudo, type, content, bytes_size) VALUES (?, ?, ?, ?, ?, ?, ?)`;		
+		const sql = `INSERT INTO messages (message_id, channel_id, user_id, pseudo, type, content, bytes_size) VALUES (?, ?, ?, ?, ?, ?, ?)`;		
 		try {
-			const result = await dbRun(sql, [msgData.id, '1', msgData.authorId, msgData.pseudo, msgData.type, msgData.content, bytes]);
+			const result = await dbRun(sql, [msgData.id, msgData.channelId, msgData.authorId, msgData.pseudo, msgData.type, msgData.content, bytes]);
 			return {
 				success: true,
 				messageId: msgData.id,
@@ -141,7 +370,7 @@ const database = {
 		}
 	},
 	
-	async getMessagesByCanal(canalId, limit = 20, lastId = null) {
+	async getMessagesByChannel(channelId, limit = 20, lastId = null) {
 		let sql = `
 			SELECT msg.*, rcvd.received, rd.read
 			, COALESCE(modified_date, created_date) AS effective_date
@@ -150,9 +379,9 @@ const database = {
 			LEFT JOIN (SELECT message_id, true as received FROM reactions WHERE reaction = 'received') rcvd ON msg.message_id = rcvd.message_id 
 			LEFT JOIN (SELECT message_id, true as read FROM reactions WHERE reaction = 'read') rd ON msg.message_id = rd.message_id 
 			LEFT JOIN (SELECT message_id FROM reactions WHERE reaction = 'deleted') dltd ON msg.message_id = dltd.message_id 
-			WHERE canal_id = ? AND dltd.message_id IS NULL
+			WHERE channel_id = ? AND dltd.message_id IS NULL
 		`;
-		let params = [canalId];
+		let params = [channelId];
 		
 		if (lastId) {
             // Sous-requête : on cherche les messages dont la date est 
@@ -174,9 +403,9 @@ const database = {
 		}
 	},
 
-	async getCanalConsumption(canalId) {
-		const sql = `SELECT SUM(bytes_size) as total_bytes FROM messages WHERE canal_id = ?`;
-		const result = await dbGet(sql, [canalId]);
+	async getChannelConsumption(channelId) {
+		const sql = `SELECT SUM(bytes_size) as total_bytes FROM messages WHERE channel_id = ?`;
+		const result = await dbGet(sql, [channelId]);
 		return result.total_bytes || 0;
 	},
 	
@@ -197,11 +426,23 @@ const database = {
 		}
 	},
 	
+	mapFriend(dbRow) {
+		return {			
+			userId1: dbRow.user_id_1,
+			vault1: dbRow.vault_1,
+			userId2: dbRow.user_id_2,
+			vault2: dbRow.vault_2,
+			status: dbRow.status,
+			actionUserId: dbRow.action_user_id,
+			channelId: dbRow.channel_id
+		};
+	},
+
 	mapMessage(dbRow) {
 		return {
 			id: dbRow.message_id,
-			canalId: dbRow.canal_id,
-			authorId: dbRow.author_id,
+			channelId: dbRow.channel_id,
+			authorId: dbRow.user_id,
 			pseudo: dbRow.pseudo,
 			type: dbRow.type,
 			content: dbRow.content,
@@ -213,6 +454,24 @@ const database = {
 			// bytesSize: dbRow.bytes_size,
 			// replyTo: dbRow.reply_to
 		};
+	},
+
+	async updateUserVault(userId, authHash, newVault) {
+		try {
+			const userVault = await database.getUser(userId, authHash) ; 
+			if (!userVault) {
+				return { success: false, message: "Utilisateur introuvable" };
+			}
+			
+			await database.updateUser(userId, newVault);
+
+			console.log(`[DB] Vault mis à jour avec succès pour ${userId}`);
+			return { success: true };
+
+		} catch (error) {
+			console.error("[DB] Erreur updateUserVault:", error);
+			return { success: false, error: error.message };
+		}
 	}
 }
 
